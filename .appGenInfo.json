@@ -1,0 +1,28 @@
+{
+  "generationParameters": {
+    "generationDate": "Mon Mar 09 2026 15:50:41 GMT+0700 (Indochina Time)",
+    "generatorPlatform": "Visual Studio Code",
+    "serviceType": "OData URL",
+    "metadataFilename": "",
+    "serviceUrl": "https://s40lp1.ucc.cit.tum.de/sap/opu/odata4/sap/zui_mm_route_conf/srvd/sap/zsd_mm_route_conf/0001/",
+    "appName": "conf-mng-fe-mm-routes",
+    "appTitle": "MM Route Configuration",
+    "appDescription": "Manage MM Warehouse Routes",
+    "appNamespace": "zgsp26.conf.mng.mmroutes",
+    "ui5Theme": "sap_horizon",
+    "ui5Version": "1.108.33",
+    "enableEslint": false,
+    "enableTypeScript": false,
+    "showMockDataInfo": true,
+    "generatorVersion": "1.20.4",
+    "template": "Custom Page V4",
+    "generatorName": "SAP Fiori Application Generator",
+    "entityRelatedConfig": [
+      {
+        "type": "Main Entity",
+        "value": "MMRouteConf"
+      }
+    ],
+    "launchText": "To launch the generated application, run the following from the generated application root folder:\n\n```\n    npm start\n```"
+  }
+}
