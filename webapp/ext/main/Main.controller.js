@@ -24,12 +24,34 @@ sap.ui.define(
     return Controller.extend(
       "zgsp26.conf.mng.mmroutes.confmngfemmroutes.ext.main.Main",
       {
+        _getUrlParams: function () {
+          let sQuery = window.location.search || "";
+
+          if (!sQuery && window.location.hash.indexOf("?") > -1) {
+            sQuery = window.location.hash.substring(
+              window.location.hash.indexOf("?"),
+            );
+          }
+
+          const oParams = new URLSearchParams(sQuery);
+
+          return {
+            ReqId: oParams.get("ReqId") || "",
+            ConfId: oParams.get("ConfId") || "",
+            ConfName: oParams.get("ConfName") || "",
+            ModuleId: oParams.get("ModuleId") || "",
+            TargetCds: oParams.get("TargetCds") || "",
+            Mode: oParams.get("Mode") || oParams.get("mode") || "",
+          };
+        },
+
         onInit: function () {
           this._oModel =
             this.getView().getModel() || this.getOwnerComponent().getModel();
 
           const oUIModel = new JSONModel({
-            editMode: false,
+            editMode: true,
+            requestCreated: false,
           });
           this.getView().setModel(oUIModel, "ui");
 
@@ -44,6 +66,75 @@ sap.ui.define(
             Search: "",
           });
           this.getView().setModel(oFilterModel, "filter");
+
+          const oRequestContext = this._getUrlParams();
+          this.getView().setModel(
+            new JSONModel(oRequestContext),
+            "requestContext",
+          );
+
+          const bHasReqId = !!oRequestContext.ReqId;
+
+          const oRequestModel = new JSONModel({
+            ReqId: oRequestContext.ReqId || "",
+            Status: bHasReqId ? "Draft" : "Not Created",
+            StatusState: bHasReqId ? "Information" : "None",
+            Reason: "",
+          });
+          this.getView().setModel(oRequestModel, "request");
+
+          if (bHasReqId) {
+            this.getView().getModel("ui").setProperty("/requestCreated", true);
+            this.getView().getModel("ui").setProperty("/editMode", false);
+
+            //  Filter table theo ReqId
+            const oTable = this.byId("routesTable");
+            oTable.bindItems({
+              path: "/MMRouteConf",
+              filters: [
+                new Filter("ReqId", FilterOperator.EQ, oRequestContext.ReqId),
+              ],
+              template: oTable.getBindingInfo("items").template,
+            });
+          }
+
+          console.log("requestContext =", oRequestContext);
+          console.log("request =", oRequestModel.getData());
+        },
+
+        onCreateRequest: async function () {
+          const oView = this.getView();
+          const oRequestContext = oView.getModel("requestContext").getData();
+          const oRequestModel = oView.getModel("request");
+          const sReason = oRequestModel.getProperty("/Reason");
+
+          if (!sReason || !sReason.trim()) {
+            MessageBox.warning("Please enter Reason before creating request.");
+            return;
+          }
+
+          try {
+            oView.setBusy(true);
+
+            // TODO: sau này thay bằng call backend thật
+            const sReqId = "REQ-" + Date.now();
+
+            oRequestModel.setProperty("/ReqId", sReqId);
+            oRequestModel.setProperty("/Status", "Draft");
+            oRequestModel.setProperty("/StatusState", "Information");
+
+            oView.getModel("ui").setProperty("/requestCreated", true);
+            oView.getModel("ui").setProperty("/editMode", false);
+
+            MessageToast.show("Request created successfully: " + sReqId);
+
+            console.log("Create Request with context =", oRequestContext);
+          } catch (e) {
+            console.error(e);
+            MessageBox.error("Failed to create request.");
+          } finally {
+            oView.setBusy(false);
+          }
         },
 
         onEdit: function () {
@@ -78,6 +169,7 @@ sap.ui.define(
               IsAllowed: false,
               InspectorId: "",
               VersionNo: 1,
+              ChangeNote: "",
             });
 
             MessageToast.show("Đã tạo dòng mới");
@@ -117,13 +209,35 @@ sap.ui.define(
 
           try {
             await oModel.submitBatch("$auto");
-
+            oView.getModel("ui").setProperty("/editMode", false);
             MessageToast.show("Saved successfully");
           } catch (e) {
+            console.error(e);
             MessageBox.error("Save failed");
           }
 
           oView.setBusy(false);
+        },
+
+        onSubmitRequest: function () {
+          const oRequestModel = this.getView().getModel("request");
+          const sReqId = oRequestModel.getProperty("/ReqId");
+
+          if (!sReqId) {
+            MessageBox.warning("Request has not been created yet.");
+            return;
+          }
+
+          MessageBox.confirm("Submit this request?", {
+            onClose: (sAction) => {
+              if (sAction === "OK") {
+                oRequestModel.setProperty("/Status", "Submitted");
+                oRequestModel.setProperty("/StatusState", "Success");
+                this.getView().getModel("ui").setProperty("/editMode", false);
+                MessageToast.show("Request submitted");
+              }
+            },
+          });
         },
 
         onRefresh: function () {
@@ -133,6 +247,7 @@ sap.ui.define(
           }
           MessageToast.show("Đã refresh");
         },
+
         onSearch: function () {
           const oTable = this.byId("routesTable");
           const oBinding = oTable.getBinding("items");
@@ -216,6 +331,7 @@ sap.ui.define(
 
           oBinding.filter(aFilters);
         },
+
         onClearFilters: function () {
           this.getView().getModel("filter").setData({
             EnvId: "",
@@ -237,6 +353,7 @@ sap.ui.define(
 
           MessageToast.show("Đã xóa bộ lọc");
         },
+
         onValueHelpEnv: function () {
           if (!this._oEnvDialog) {
             this._oEnvDialog = new SelectDialog({
@@ -282,6 +399,7 @@ sap.ui.define(
 
           this._oEnvDialog.open();
         },
+
         onValueHelpPlant: function () {
           if (!this._oPlantDialog) {
             this._oPlantDialog = new SelectDialog({

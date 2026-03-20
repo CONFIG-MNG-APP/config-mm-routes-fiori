@@ -2,130 +2,203 @@
     controllerName="zgsp26.conf.mng.mmroutes.confmngfemmroutes.ext.main.Main"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
-    xmlns:core="sap.ui.core">
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.ui.layout.form">
 
-    <Page id="mainPage" title="MM Route Inline Maintenance">
+    <Page id="mainPage" title="Warehouse Route Request Maintenance">
         <content>
             <VBox class="sapUiSmallMargin">
-            <VBox class="sapUiSmallMarginBottom">
-                <Toolbar>
-                    <Title text="Filters" level="H3"/>
-                    <ToolbarSpacer/>
-                    <Button text="Go" type="Emphasized" press=".onSearch"/>
-                    <Button text="Clear" press=".onClearFilters"/>
-                </Toolbar>
 
-                <HBox wrap="Wrap" class="sapUiTinyMarginTop sapUiTinyMarginBottom">
-                    <VBox class="sapUiSmallMarginEnd">
-                        <Label text="Search"/>
-                        <SearchField
-                            id="searchField"
-                            width="16rem"
-                            search=".onSearch"/>
+                <MessageStrip
+                    text="You are maintaining warehouse route data through a change request."
+                    type="Information"
+                    showIcon="true"
+                    class="sapUiSmallMarginBottom"/>
+
+                <Panel
+                    headerText="Request Context"
+                    class="sapUiResponsiveMargin sapUiContentPadding sapUiSmallMarginBottom">
+                    <f:SimpleForm
+                        layout="ResponsiveGridLayout"
+                        labelSpanXL="3"
+                        labelSpanL="3"
+                        labelSpanM="4"
+                        labelSpanS="12"
+                        adjustLabelSpan="false"
+                        emptySpanXL="1"
+                        emptySpanL="1"
+                        emptySpanM="0"
+                        emptySpanS="0"
+                        columnsXL="2"
+                        columnsL="2"
+                        columnsM="2"
+                        singleContainerFullSize="false">
+
+                        <Label text="Request ID"/>
+                        <Text text="{request>/ReqId}"/>
+
+                        <Label text="Status"/>
+                        <ObjectStatus
+                            text="{request>/Status}"
+                            state="{request>/StatusState}"/>
+
+                        <Label text="Configuration Name"/>
+                        <Text text="{requestContext>/ConfName}" />
+
+                        <Label text="Module"/>
+                        <Text text="{requestContext>/ModuleId}" />
+
+                        <Label text="Target CDS"/>
+                        <Text text="{requestContext>/TargetCds}" />
+
+                        <Label text="Reason"/>
+                        <TextArea
+                            value="{request>/Reason}"
+                            editable="{ui>/editMode}"
+                            rows="3"
+                            width="100%"/>
+                    </f:SimpleForm>
+                </Panel>
+
+                <Toolbar class="sapUiTinyMarginBottom">
+                <Title text="Warehouse Route Lines" level="H2"/>
+                <ToolbarSpacer/>
+
+                <Button
+                    text="Create Request"
+                    type="Emphasized"
+                    press=".onCreateRequest"
+                    visible="{= !${ui>/requestCreated} }"/>
+
+                <Button
+                    text="Edit"
+                    press=".onEdit"
+                    visible="{= ${ui>/requestCreated} &amp;&amp; !${ui>/editMode} }"/>
+
+                <Button
+                    text="Add Line"
+                    press=".onCreate"
+                    visible="{ui>/editMode}"/>
+
+                <Button
+                    text="Delete Line"
+                    press=".onDelete"
+                    visible="{ui>/editMode}"/>
+
+                <Button
+                    text="Save Draft"
+                    type="Emphasized"
+                    press=".onSave"
+                    visible="{= ${ui>/requestCreated} &amp;&amp; ${ui>/editMode} }"/>
+
+                <Button
+                    text="Submit Request"
+                    type="Accept"
+                    press=".onSubmitRequest"
+                    visible="{= ${ui>/requestCreated} &amp;&amp; !${ui>/editMode} }"/>
+
+                <Button
+                    text="Cancel Changes"
+                    press=".onCancel"
+                    visible="{ui>/editMode}"/>
+
+                <Button
+                    text="Refresh"
+                    press=".onRefresh"
+                    visible="{= ${ui>/requestCreated} &amp;&amp; !${ui>/editMode} }"/>
+            </Toolbar>
+
+                <Panel
+                    expandable="true"
+                    expanded="false"
+                    headerText="Filter Route Lines"
+                    class="sapUiTinyMarginBottom sapUiContentPadding">
+
+                    <VBox>
+                        <HBox wrap="Wrap" class="sapUiTinyMarginTop sapUiTinyMarginBottom">
+                            <VBox class="sapUiSmallMarginEnd">
+                                <Label text="Search"/>
+                                <SearchField
+                                    id="searchField"
+                                    width="16rem"
+                                    search=".onSearch"/>
+                            </VBox>
+
+                            <VBox class="sapUiSmallMarginEnd">
+                                <Label text="Environment"/>
+                                <Input
+                                    id="envInput"
+                                    width="12rem"
+                                    value="{filter>/EnvId}"
+                                    showValueHelp="true"
+                                    valueHelpRequest=".onValueHelpEnv"/>
+                            </VBox>
+
+                            <VBox class="sapUiSmallMarginEnd">
+                                <Label text="Plant"/>
+                                <Input
+                                    id="plantInput"
+                                    width="12rem"
+                                    value="{filter>/PlantId}"
+                                    showValueHelp="true"
+                                    valueHelpRequest=".onValueHelpPlant"/>
+                            </VBox>
+
+                            <VBox class="sapUiSmallMarginEnd">
+                                <Label text="Sending Warehouse"/>
+                                <Input
+                                    id="sendWhInput"
+                                    width="12rem"
+                                    value="{filter>/SendWh}"/>
+                            </VBox>
+
+                            <VBox class="sapUiSmallMarginEnd">
+                                <Label text="Receiving Warehouse"/>
+                                <Input
+                                    id="receiveWhInput"
+                                    width="12rem"
+                                    value="{filter>/ReceiveWh}"/>
+                            </VBox>
+
+                            <VBox class="sapUiSmallMarginEnd">
+                                <Label text="Transport Mode"/>
+                                <Input
+                                    id="transModeInput"
+                                    width="12rem"
+                                    value="{filter>/TransMode}"/>
+                            </VBox>
+
+                            <VBox class="sapUiSmallMarginEnd">
+                                <Label text="Allowed"/>
+                                <Select
+                                    id="allowedSelect"
+                                    width="10rem"
+                                    selectedKey="{filter>/Allowed}">
+                                    <items>
+                                        <core:Item key="" text="All"/>
+                                        <core:Item key="X" text="Yes"/>
+                                        <core:Item key="false" text="No"/>
+                                    </items>
+                                </Select>
+                            </VBox>
+
+                            <VBox class="sapUiSmallMarginEnd">
+                                <Label text="Inspector"/>
+                                <Input
+                                    id="inspectorInput"
+                                    width="12rem"
+                                    value="{filter>/InspectorId}"/>
+                            </VBox>
+                        </HBox>
+
+                        <Toolbar design="Transparent">
+                            <ToolbarSpacer/>
+                            <Button text="Go" type="Emphasized" press=".onSearch"/>
+                            <Button text="Clear" press=".onClearFilters"/>
+                        </Toolbar>
                     </VBox>
+                </Panel>
 
-                    <VBox class="sapUiSmallMarginEnd">
-                        <Label text="Environment"/>
-                        <Input
-                            id="envInput"
-                            width="12rem"
-                            value="{filter>/EnvId}"
-                            showValueHelp="true"
-                            valueHelpRequest=".onValueHelpEnv"/>
-                    </VBox>
-
-                    <VBox class="sapUiSmallMarginEnd">
-                        <Label text="Plant"/>
-                        <Input
-                            id="plantInput"
-                            width="12rem"
-                            value="{filter>/PlantId}"
-                            showValueHelp="true"
-                            valueHelpRequest=".onValueHelpPlant"/>
-                    </VBox>
-
-                    <VBox class="sapUiSmallMarginEnd">
-                        <Label text="Sending Warehouse"/>
-                        <Input
-                            id="sendWhInput"
-                            width="12rem"
-                            value="{filter>/SendWh}"/>
-                    </VBox>
-
-                    <VBox class="sapUiSmallMarginEnd">
-                        <Label text="Receiving Warehouse"/>
-                        <Input
-                            id="receiveWhInput"
-                            width="12rem"
-                            value="{filter>/ReceiveWh}"/>
-                    </VBox>
-
-                    <VBox class="sapUiSmallMarginEnd">
-                        <Label text="Transport Mode"/>
-                        <Input
-                            id="transModeInput"
-                            width="12rem"
-                            value="{filter>/TransMode}"/>
-                    </VBox>
-
-                    <VBox class="sapUiSmallMarginEnd">
-                        <Label text="Allowed"/>
-                        <Select
-                            id="allowedSelect"
-                            width="10rem"
-                            selectedKey="{filter>/Allowed}">
-                            <items>
-                                <core:Item key="" text="All"/>
-                                <core:Item key="X" text="Yes"/>
-                                <core:Item key="false" text="No"/>
-                            </items>
-                        </Select>
-                    </VBox>
-
-                    <VBox class="sapUiSmallMarginEnd">
-                        <Label text="Inspector"/>
-                        <Input
-                            id="inspectorInput"
-                            width="12rem"
-                            value="{filter>/InspectorId}"/>
-                    </VBox>
-                </HBox>
-            </VBox>
-                <Toolbar>
-                    <Title text="Warehouse Routes" level="H2"/>
-                    <ToolbarSpacer/>
-
-                    <Button
-                        text="Edit"
-                        press=".onEdit"
-                        visible="{= !${ui>/editMode} }"/>
-
-                    <Button
-                        text="Create"
-                        press=".onCreate"
-                        visible="{ui>/editMode}"/>
-
-                    <Button
-                        text="Delete"
-                        press=".onDelete"
-                        visible="{ui>/editMode}"/>
-
-                    <Button
-                        text="Save"
-                        type="Emphasized"
-                        press=".onSave"
-                        visible="{ui>/editMode}"/>
-
-                    <Button
-                        text="Cancel"
-                        press=".onCancel"
-                        visible="{ui>/editMode}"/>
-
-                    <Button
-                        text="Refresh"
-                        press=".onRefresh"
-                        visible="{= !${ui>/editMode} }"/>
-                </Toolbar>
                 <Table
                     id="routesTable"
                     mode="MultiSelect"
@@ -137,31 +210,45 @@
                     }">
 
                     <columns>
-                        <Column><Text text="Environment"/></Column>
-                        <Column><Text text="Plant"/></Column>
-                        <Column><Text text="Sending Warehouse"/></Column>
-                        <Column><Text text="Receiving Warehouse"/></Column>
-                        <Column><Text text="Transport Mode"/></Column>
-                        <Column><Text text="Allowed"/></Column>
-                        <Column><Text text="Inspector"/></Column>
-                        <Column><Text text="Version"/></Column>
+                    <Column width="8rem"><Text text="Status"/></Column>  
+                        <Column width="10rem"><Text text="Environment"/></Column>
+                        <Column width="10rem"><Text text="Plant"/></Column>
+                        <Column width="12rem"><Text text="Sending Warehouse"/></Column>
+                        <Column width="12rem"><Text text="Receiving Warehouse"/></Column>
+                        <Column width="10rem"><Text text="Transport Mode"/></Column>
+                        <Column width="8rem"><Text text="Allowed"/></Column>
+                        <Column width="10rem"><Text text="Inspector"/></Column>
+                        <Column width="8rem"><Text text="Version"/></Column>
+                        <Column width="14rem"><Text text="Change Note"/></Column>
                     </columns>
 
                     <items>
                         <ColumnListItem>
                             <cells>
+                            <!-- Status badge — thêm vào đầu -->
+            <ObjectStatus
+                text="{= ${ActionType} === 'U' ? 'UPDATE' : 
+                       ${ActionType} === 'C' ? 'CREATE' : 
+                       ${ActionType} === 'D' ? 'DELETE' : '—' }"
+                state="{= ${ActionType} === 'U' ? 'Information' : 
+                          ${ActionType} === 'C' ? 'Success' : 
+                          ${ActionType} === 'D' ? 'Error' : 'None' }"/>
+
+            <!-- các cell cũ giữ nguyên -->
                                 <Input value="{EnvId}" editable="{ui>/editMode}"/>
                                 <Input value="{PlantId}" editable="{ui>/editMode}"/>
                                 <Input value="{SendWh}" editable="{ui>/editMode}"/>
                                 <Input value="{ReceiveWh}" editable="{ui>/editMode}"/>
                                 <Input value="{TransMode}" editable="{ui>/editMode}"/>
-                                <CheckBox selected="{IsAllowed}" enabled="false"/>
-                                <Input value="{InspectorId}" editable="false"/>
+                                <CheckBox selected="{IsAllowed}" enabled="{ui>/editMode}"/>
+                                <Input value="{InspectorId}" editable="{ui>/editMode}"/>
                                 <Input value="{VersionNo}" type="Number" editable="false"/>
+                                <Input value="{ChangeNote}" editable="{ui>/editMode}"/>
                             </cells>
                         </ColumnListItem>
                     </items>
                 </Table>
+
             </VBox>
         </content>
     </Page>
