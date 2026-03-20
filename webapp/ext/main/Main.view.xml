@@ -48,9 +48,6 @@
                         <Label text="Module"/>
                         <Text text="{requestContext>/ModuleId}" />
 
-                        <Label text="Target CDS"/>
-                        <Text text="{requestContext>/TargetCds}" />
-
                         <Label text="Reason"/>
                         <TextArea
                             value="{request>/Reason}"

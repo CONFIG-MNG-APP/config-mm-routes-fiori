@@ -41,6 +41,7 @@ sap.ui.define(
             ConfName: oParams.get("ConfName") || "",
             ModuleId: oParams.get("ModuleId") || "",
             TargetCds: oParams.get("TargetCds") || "",
+            Status: oParams.get("Status") || "",
             Mode: oParams.get("Mode") || oParams.get("mode") || "",
           };
         },
@@ -75,9 +76,10 @@ sap.ui.define(
 
           const bHasReqId = !!oRequestContext.ReqId;
 
+          const sStatus = oRequestContext.Status || (bHasReqId ? "Draft" : "Not Created");
           const oRequestModel = new JSONModel({
             ReqId: oRequestContext.ReqId || "",
-            Status: bHasReqId ? "Draft" : "Not Created",
+            Status: sStatus,
             StatusState: bHasReqId ? "Information" : "None",
             Reason: "",
           });
