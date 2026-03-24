@@ -22,7 +22,7 @@ server:
     - name: fiori-tools-appreload
       afterMiddleware: compression
       configuration:
-        port: 35729
+        port: 35731
         path: webapp
         delay: 300
     - name: fiori-tools-preview

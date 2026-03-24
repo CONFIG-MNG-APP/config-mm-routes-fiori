@@ -47,11 +47,14 @@
             <Annotation Term="SAP__core.SchemaVersion" String="1.0.0"/>
             <EntityType Name="MMRouteConfType">
                 <Key>
+                    <PropertyRef Name="ReqId"/>
+                    <PropertyRef Name="ReqItemId"/>
                     <PropertyRef Name="ItemId"/>
                     <PropertyRef Name="IsActiveEntity"/>
                 </Key>
+                <Property Name="ReqId" Type="Edm.Guid" Nullable="false"/>
+                <Property Name="ReqItemId" Type="Edm.Guid" Nullable="false"/>
                 <Property Name="ItemId" Type="Edm.Guid" Nullable="false"/>
-                <Property Name="ReqId" Type="Edm.Guid"/>
                 <Property Name="EnvId" Type="Edm.String" Nullable="false" MaxLength="10"/>
                 <Property Name="PlantId" Type="Edm.String" Nullable="false" MaxLength="10"/>
                 <Property Name="SendWh" Type="Edm.String" Nullable="false" MaxLength="10"/>
@@ -60,6 +63,7 @@
                 <Property Name="TransMode" Type="Edm.String" Nullable="false" MaxLength="20"/>
                 <Property Name="IsAllowed" Type="Edm.Boolean" Nullable="false"/>
                 <Property Name="VersionNo" Type="Edm.Int32" Nullable="false"/>
+                <Property Name="ChangeNote" Type="Edm.String" MaxLength="255"/>
                 <Property Name="CreatedBy" Type="Edm.String" Nullable="false" MaxLength="12"/>
                 <Property Name="CreatedAt" Type="Edm.DateTimeOffset" Precision="7"/>
                 <Property Name="ChangedBy" Type="Edm.String" Nullable="false" MaxLength="12"/>
@@ -132,8 +136,23 @@
                 <Parameter Name="PreserveChanges" Type="Edm.Boolean" Nullable="false"/>
                 <ReturnType Type="com.sap.gateway.srvd.zsd_mm_route_conf.v0001.MMRouteConfType" Nullable="false"/>
             </Action>
+            <EntityType Name="MMRouteMainType">
+                <Key>
+                    <PropertyRef Name="ItemId"/>
+                </Key>
+                <Property Name="ItemId" Type="Edm.Guid" Nullable="false"/>
+                <Property Name="EnvId" Type="Edm.String" MaxLength="10"/>
+                <Property Name="PlantId" Type="Edm.String" MaxLength="10"/>
+                <Property Name="SendWh" Type="Edm.String" MaxLength="10"/>
+                <Property Name="ReceiveWh" Type="Edm.String" MaxLength="10"/>
+                <Property Name="InspectorId" Type="Edm.String" MaxLength="12"/>
+                <Property Name="TransMode" Type="Edm.String" MaxLength="20"/>
+                <Property Name="IsAllowed" Type="Edm.Boolean"/>
+                <Property Name="VersionNo" Type="Edm.Int32"/>
+            </EntityType>
             <EntityContainer Name="Container">
                 <EntitySet Name="I_DraftAdministrativeData" EntityType="com.sap.gateway.srvd.zsd_mm_route_conf.v0001.I_DraftAdministrativeDataType"/>
+                <EntitySet Name="MMRouteMain" EntityType="com.sap.gateway.srvd.zsd_mm_route_conf.v0001.MMRouteMainType"/>
                 <EntitySet Name="MMRouteConf" EntityType="com.sap.gateway.srvd.zsd_mm_route_conf.v0001.MMRouteConfType">
                     <NavigationPropertyBinding Path="DraftAdministrativeData" Target="I_DraftAdministrativeData"/>
                     <NavigationPropertyBinding Path="SiblingEntity" Target="MMRouteConf"/>

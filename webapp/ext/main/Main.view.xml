@@ -3,250 +3,338 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:core="sap.ui.core"
-    xmlns:f="sap.ui.layout.form">
+    xmlns:f="sap.f"
+    displayBlock="true">
 
-    <Page id="mainPage" title="Warehouse Route Request Maintenance">
-        <content>
-            <VBox class="sapUiSmallMargin">
+  <f:DynamicPage id="mainPage" toggleHeaderOnTitleClick="false" headerPinned="true">
 
-                <MessageStrip
-                    text="You are maintaining warehouse route data through a change request."
-                    type="Information"
-                    showIcon="true"
-                    class="sapUiSmallMarginBottom"/>
+    <!-- ─── Title ─── -->
+    <f:title>
+      <f:DynamicPageTitle>
+        <f:heading>
+          <HBox alignItems="Center">
+            <core:Icon src="sap-icon://map" size="1.4rem" color="#0070f2" class="mmrTitleIcon" />
+            <Title text="Warehouse Route Request Maintenance" level="H2" class="mmrTitleText" />
+          </HBox>
+        </f:heading>
+        <f:actions>
+          <Button
+            text="Submit Request"
+            type="Accept"
+            icon="sap-icon://paper-plane"
+            press=".onSubmitRequest"
+            visible="{= ${ui>/requestCreated} &amp;&amp; !${ui>/editMode} }" />
+          <Button
+            text="Save Draft"
+            type="Emphasized"
+            icon="sap-icon://save"
+            press=".onSave"
+            visible="{= ${ui>/requestCreated} &amp;&amp; ${ui>/editMode} }" />
+        </f:actions>
+        <f:navigationActions>
+          <Button icon="sap-icon://nav-back" tooltip="Back" press=".onNavBack" type="Transparent" />
+        </f:navigationActions>
+      </f:DynamicPageTitle>
+    </f:title>
 
-                <Panel
-                    headerText="Request Context"
-                    class="sapUiResponsiveMargin sapUiContentPadding sapUiSmallMarginBottom">
-                    <f:SimpleForm
-                        layout="ResponsiveGridLayout"
-                        labelSpanXL="3"
-                        labelSpanL="3"
-                        labelSpanM="4"
-                        labelSpanS="12"
-                        adjustLabelSpan="false"
-                        emptySpanXL="1"
-                        emptySpanL="1"
-                        emptySpanM="0"
-                        emptySpanS="0"
-                        columnsXL="2"
-                        columnsL="2"
-                        columnsM="2"
-                        singleContainerFullSize="false">
+    <!-- ─── Pinned Header: Request Context ─── -->
+    <f:header>
+      <f:DynamicPageHeader pinnable="false">
+        <HBox alignItems="Stretch" wrap="Wrap" class="mmrHeaderBox">
 
-                        <Label text="Request ID"/>
-                        <Text text="{request>/ReqId}"/>
+          <!-- Request Info Card -->
+          <VBox class="mmrInfoCard">
+            <HBox alignItems="Center" class="sapUiTinyMarginBottom">
+              <core:Icon src="sap-icon://document" color="#0070f2" size="0.8rem" class="sapUiSmallMarginEnd" />
+              <Text text="REQUEST" class="mmrSectionLabel" />
+            </HBox>
+            <HBox alignItems="Center" class="sapUiSmallMarginTop">
+              <core:Icon src="sap-icon://key" color="#89919a" size="0.75rem" class="mmrFieldIcon" />
+              <VBox class="sapUiTinyMarginBegin">
+                <Text text="Request ID" class="mmrFieldLabel" />
+                <Text text="{request>/ReqId}" class="mmrReqIdText" />
+              </VBox>
+            </HBox>
+            <HBox alignItems="Center" class="sapUiTinyMarginTop">
+              <core:Icon src="sap-icon://status-in-process" color="#89919a" size="0.75rem" class="mmrFieldIcon" />
+              <VBox class="sapUiTinyMarginBegin">
+                <Text text="Status" class="mmrFieldLabel" />
+                <ObjectStatus text="{request>/Status}" state="{request>/StatusState}" inverted="true" />
+              </VBox>
+            </HBox>
+          </VBox>
 
-                        <Label text="Status"/>
-                        <ObjectStatus
-                            text="{request>/Status}"
-                            state="{request>/StatusState}"/>
+          <!-- Configuration Card -->
+          <VBox class="mmrInfoCard">
+            <HBox alignItems="Center" class="sapUiTinyMarginBottom">
+              <core:Icon src="sap-icon://settings" color="#0070f2" size="0.8rem" class="sapUiSmallMarginEnd" />
+              <Text text="CONFIGURATION" class="mmrSectionLabel" />
+            </HBox>
+            <HBox alignItems="Center" class="sapUiSmallMarginTop">
+              <core:Icon src="sap-icon://puzzle" color="#0070f2" size="0.75rem" class="mmrFieldIcon" />
+              <VBox class="sapUiTinyMarginBegin">
+                <Text text="Module" class="mmrFieldLabel" />
+                <ObjectStatus text="{requestContext>/ModuleId}" state="Information" inverted="true" />
+              </VBox>
+            </HBox>
+            <HBox alignItems="Center" class="sapUiTinyMarginTop">
+              <core:Icon src="sap-icon://wrench" color="#89919a" size="0.75rem" class="mmrFieldIcon" />
+              <VBox class="sapUiTinyMarginBegin">
+                <Text text="Configuration Name" class="mmrFieldLabel" />
+                <Text text="{requestContext>/ConfName}" class="mmrFieldValue" />
+              </VBox>
+            </HBox>
+          </VBox>
 
-                        <Label text="Configuration Name"/>
-                        <Text text="{requestContext>/ConfName}" />
+          <!-- Request Details Card: Title + Reason -->
+          <VBox class="mmrInfoCard mmrInfoCard--wide">
+            <HBox alignItems="Center" class="sapUiTinyMarginBottom">
+              <core:Icon src="sap-icon://notes" color="#0070f2" size="0.8rem" class="sapUiSmallMarginEnd" />
+              <Text text="REQUEST DETAILS" class="mmrSectionLabel" />
+            </HBox>
+            <HBox alignItems="Center" class="sapUiSmallMarginTop">
+              <core:Icon src="sap-icon://text" color="#89919a" size="0.75rem" class="mmrFieldIcon" />
+              <VBox class="sapUiTinyMarginBegin" width="100%">
+                <Text text="Title" class="mmrFieldLabel" />
+                <Input
+                  value="{request>/ReqTitle}"
+                  placeholder="e.g. Add new route for PLANT1234"
+                  editable="{= ${request>/Status} !== 'SUBMITTED' &amp;&amp; ${request>/Status} !== 'APPROVED' &amp;&amp; ${request>/Status} !== 'ACTIVE'}"
+                  width="100%" />
+              </VBox>
+            </HBox>
+            <HBox alignItems="Center" class="sapUiTinyMarginTop">
+              <core:Icon src="sap-icon://edit" color="#89919a" size="0.75rem" class="mmrFieldIcon" />
+              <VBox class="sapUiTinyMarginBegin" width="100%">
+                <Text text="Reason for Change" class="mmrFieldLabel" />
+                <TextArea
+                  value="{request>/Reason}"
+                  editable="{= ${request>/Status} !== 'SUBMITTED' &amp;&amp; ${request>/Status} !== 'APPROVED' &amp;&amp; ${request>/Status} !== 'ACTIVE'}"
+                  rows="2"
+                  width="100%"
+                  placeholder="Why is this change needed?" />
+              </VBox>
+            </HBox>
+          </VBox>
 
-                        <Label text="Module"/>
-                        <Text text="{requestContext>/ModuleId}" />
+        </HBox>
+      </f:DynamicPageHeader>
+    </f:header>
 
-                        <Label text="Reason"/>
-                        <TextArea
-                            value="{request>/Reason}"
-                            editable="{ui>/editMode}"
-                            rows="3"
-                            width="100%"/>
-                    </f:SimpleForm>
-                </Panel>
+    <!-- ─── Content ─── -->
+    <f:content>
+      <VBox class="sapUiMediumMarginBegin sapUiMediumMarginEnd sapUiSmallMarginTop sapUiMediumMarginBottom">
 
-                <Toolbar class="sapUiTinyMarginBottom">
-                <Title text="Warehouse Route Lines" level="H2"/>
-                <ToolbarSpacer/>
+        <MessageStrip
+          text="Changes made here are part of a change request and will not take effect until approved."
+          type="Information"
+          showIcon="true"
+          class="sapUiSmallMarginBottom" />
 
-                <Button
-                    text="Create Request"
-                    type="Emphasized"
-                    press=".onCreateRequest"
-                    visible="{= !${ui>/requestCreated} }"/>
+        <!-- Table Toolbar -->
+        <OverflowToolbar class="sapUiTinyMarginBottom mmrTableToolbar">
+          <Title text="Warehouse Route Lines" level="H4" />
+          <ToolbarSpacer />
 
-                <Button
-                    text="Edit"
-                    press=".onEdit"
-                    visible="{= ${ui>/requestCreated} &amp;&amp; !${ui>/editMode} }"/>
+          <Button
+            text="Create Request"
+            type="Emphasized"
+            icon="sap-icon://add-document"
+            press=".onCreateRequest"
+            visible="{= !${ui>/requestCreated} }" />
 
-                <Button
-                    text="Add Line"
-                    press=".onCreate"
-                    visible="{ui>/editMode}"/>
+          <Button
+            text="Edit"
+            icon="sap-icon://edit"
+            press=".onEdit"
+            visible="{= ${ui>/requestCreated} &amp;&amp; !${ui>/editMode} }" />
 
-                <Button
-                    text="Delete Line"
-                    press=".onDelete"
-                    visible="{ui>/editMode}"/>
+          <Button
+            text="Add Line"
+            icon="sap-icon://add"
+            press=".onCreate"
+            visible="{ui>/editMode}" />
 
-                <Button
-                    text="Save Draft"
-                    type="Emphasized"
-                    press=".onSave"
-                    visible="{= ${ui>/requestCreated} &amp;&amp; ${ui>/editMode} }"/>
+          <Button
+            text="Delete"
+            icon="sap-icon://delete"
+            type="Reject"
+            press=".onDelete"
+            visible="{ui>/editMode}" />
 
-                <Button
-                    text="Submit Request"
-                    type="Accept"
-                    press=".onSubmitRequest"
-                    visible="{= ${ui>/requestCreated} &amp;&amp; !${ui>/editMode} }"/>
+          <Button
+            text="Cancel"
+            icon="sap-icon://sys-cancel"
+            press=".onCancel"
+            visible="{ui>/editMode}" />
 
-                <Button
-                    text="Cancel Changes"
-                    press=".onCancel"
-                    visible="{ui>/editMode}"/>
+          <Button
+            icon="sap-icon://refresh"
+            tooltip="Refresh"
+            type="Transparent"
+            press=".onRefresh"
+            visible="{= ${ui>/requestCreated} &amp;&amp; !${ui>/editMode} }" />
+        </OverflowToolbar>
 
-                <Button
-                    text="Refresh"
-                    press=".onRefresh"
-                    visible="{= ${ui>/requestCreated} &amp;&amp; !${ui>/editMode} }"/>
-            </Toolbar>
+        <!-- Filter Panel -->
+        <Panel expandable="true" expanded="false" headerText="Filter Route Lines" class="sapUiTinyMarginBottom">
+          <VBox class="sapUiSmallMargin">
+            <HBox wrap="Wrap">
+              <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                <Label text="Search" />
+                <SearchField id="searchField" width="16rem" search=".onSearch" />
+              </VBox>
+              <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                <Label text="Environment" />
+                <Input id="envInput" width="9rem" value="{filter>/EnvId}"
+                  showValueHelp="true" valueHelpRequest=".onValueHelpEnv" />
+              </VBox>
+              <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                <Label text="Plant" />
+                <Input id="plantInput" width="9rem" value="{filter>/PlantId}"
+                  showValueHelp="true" valueHelpRequest=".onValueHelpPlant" />
+              </VBox>
+              <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                <Label text="Transport Mode" />
+                <Input id="transModeInput" width="10rem" value="{filter>/TransMode}" />
+              </VBox>
+              <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                <Label text="Allowed" />
+                <Select id="allowedSelect" width="9rem" selectedKey="{filter>/Allowed}">
+                  <items>
+                    <core:Item key="" text="All" />
+                    <core:Item key="X" text="Yes" />
+                    <core:Item key="false" text="No" />
+                  </items>
+                </Select>
+              </VBox>
+            </HBox>
+            <HBox justifyContent="End">
+              <Button text="Go" type="Emphasized" press=".onSearch" class="sapUiSmallMarginEnd" />
+              <Button text="Clear" press=".onClearFilters" />
+            </HBox>
+          </VBox>
+        </Panel>
 
-                <Panel
-                    expandable="true"
-                    expanded="false"
-                    headerText="Filter Route Lines"
-                    class="sapUiTinyMarginBottom sapUiContentPadding">
+        <!-- ─── Routes Table ─── -->
+        <Table
+          id="routesTable"
+          mode="MultiSelect"
+          growing="true"
+          growingThreshold="20"
+          growingScrollToLoad="true"
+          inset="false"
+          noDataText="No route lines — click 'Add Line' to add the first entry"
+          class="mmrRoutesTable"
+          items="{path: 'tableData>/rows'}">
 
-                    <VBox>
-                        <HBox wrap="Wrap" class="sapUiTinyMarginTop sapUiTinyMarginBottom">
-                            <VBox class="sapUiSmallMarginEnd">
-                                <Label text="Search"/>
-                                <SearchField
-                                    id="searchField"
-                                    width="16rem"
-                                    search=".onSearch"/>
-                            </VBox>
+          <columns>
+            <Column width="8rem">
+              <Text text="Action" />
+            </Column>
+            <Column width="7rem">
+              <Text text="Env" />
+            </Column>
+            <Column width="11rem">
+              <Text text="Plant" />
+            </Column>
+            <Column width="10rem" minScreenWidth="Tablet" demandPopin="true">
+              <Text text="Send WH" />
+            </Column>
+            <Column width="10rem" minScreenWidth="Tablet" demandPopin="true">
+              <Text text="Recv WH" />
+            </Column>
+            <Column width="10rem" minScreenWidth="Tablet" demandPopin="true">
+              <Text text="Transport" />
+            </Column>
+            <Column width="8rem" hAlign="Center">
+              <Text text="Allowed" />
+            </Column>
+            <Column width="10rem" minScreenWidth="Large" demandPopin="true">
+              <Text text="Inspector" />
+            </Column>
+            <Column width="5rem" minScreenWidth="Large" demandPopin="true" hAlign="End">
+              <Text text="Ver." />
+            </Column>
+            <Column minScreenWidth="Large" demandPopin="true">
+              <Text text="Change Note" />
+            </Column>
+          </columns>
 
-                            <VBox class="sapUiSmallMarginEnd">
-                                <Label text="Environment"/>
-                                <Input
-                                    id="envInput"
-                                    width="12rem"
-                                    value="{filter>/EnvId}"
-                                    showValueHelp="true"
-                                    valueHelpRequest=".onValueHelpEnv"/>
-                            </VBox>
+          <items>
+            <ColumnListItem vAlign="Middle"
+              highlight="{= ${tableData>_state} === 'modified' ? 'Information' : ${tableData>_state} === 'new' ? 'Success' : ${tableData>_state} === 'deleted' ? 'Error' : 'None'}">
+              <cells>
 
-                            <VBox class="sapUiSmallMarginEnd">
-                                <Label text="Plant"/>
-                                <Input
-                                    id="plantInput"
-                                    width="12rem"
-                                    value="{filter>/PlantId}"
-                                    showValueHelp="true"
-                                    valueHelpRequest=".onValueHelpPlant"/>
-                            </VBox>
+                <!-- Action badge -->
+                <ObjectStatus
+                  text="{= ${tableData>ActionType} === 'U' ? 'UPDATE' : ${tableData>ActionType} === 'C' ? 'CREATE' : ${tableData>ActionType} === 'X' ? 'DELETE' : '—'}"
+                  state="{= ${tableData>ActionType} === 'U' ? 'Information' : ${tableData>ActionType} === 'C' ? 'Success' : ${tableData>ActionType} === 'X' ? 'Error' : 'None'}"
+                  inverted="true" />
 
-                            <VBox class="sapUiSmallMarginEnd">
-                                <Label text="Sending Warehouse"/>
-                                <Input
-                                    id="sendWhInput"
-                                    width="12rem"
-                                    value="{filter>/SendWh}"/>
-                            </VBox>
+                <!-- Environment (always read-only) -->
+                <ObjectStatus text="{tableData>EnvId}" state="Information" />
 
-                            <VBox class="sapUiSmallMarginEnd">
-                                <Label text="Receiving Warehouse"/>
-                                <Input
-                                    id="receiveWhInput"
-                                    width="12rem"
-                                    value="{filter>/ReceiveWh}"/>
-                            </VBox>
+                <!-- Plant -->
+                <HBox>
+                  <Text text="{tableData>PlantId}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
+                  <Input value="{tableData>PlantId}" visible="{ui>/editMode}" width="100%"
+                    showValueHelp="true" valueHelpRequest=".onValueHelpPlantCell" />
+                </HBox>
 
-                            <VBox class="sapUiSmallMarginEnd">
-                                <Label text="Transport Mode"/>
-                                <Input
-                                    id="transModeInput"
-                                    width="12rem"
-                                    value="{filter>/TransMode}"/>
-                            </VBox>
+                <!-- Sending WH -->
+                <HBox>
+                  <Text text="{tableData>SendWh}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
+                  <Input value="{tableData>SendWh}" visible="{ui>/editMode}" width="100%"
+                    showValueHelp="true" valueHelpRequest=".onValueHelpSendWh" />
+                </HBox>
 
-                            <VBox class="sapUiSmallMarginEnd">
-                                <Label text="Allowed"/>
-                                <Select
-                                    id="allowedSelect"
-                                    width="10rem"
-                                    selectedKey="{filter>/Allowed}">
-                                    <items>
-                                        <core:Item key="" text="All"/>
-                                        <core:Item key="X" text="Yes"/>
-                                        <core:Item key="false" text="No"/>
-                                    </items>
-                                </Select>
-                            </VBox>
+                <!-- Receiving WH -->
+                <HBox>
+                  <Text text="{tableData>ReceiveWh}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
+                  <Input value="{tableData>ReceiveWh}" visible="{ui>/editMode}" width="100%"
+                    showValueHelp="true" valueHelpRequest=".onValueHelpRecvWh" />
+                </HBox>
 
-                            <VBox class="sapUiSmallMarginEnd">
-                                <Label text="Inspector"/>
-                                <Input
-                                    id="inspectorInput"
-                                    width="12rem"
-                                    value="{filter>/InspectorId}"/>
-                            </VBox>
-                        </HBox>
+                <!-- Transport Mode -->
+                <HBox>
+                  <Text text="{tableData>TransMode}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
+                  <Input value="{tableData>TransMode}" visible="{ui>/editMode}" width="100%"
+                    showValueHelp="true" valueHelpRequest=".onValueHelpTransMode" />
+                </HBox>
 
-                        <Toolbar design="Transparent">
-                            <ToolbarSpacer/>
-                            <Button text="Go" type="Emphasized" press=".onSearch"/>
-                            <Button text="Clear" press=".onClearFilters"/>
-                        </Toolbar>
-                    </VBox>
-                </Panel>
+                <!-- Allowed -->
+                <HBox alignItems="Center" justifyContent="Center">
+                  <ObjectStatus
+                    text="{= ${tableData>IsAllowed} ? 'Yes' : 'No'}"
+                    state="{= ${tableData>IsAllowed} ? 'Success' : 'Error'}"
+                    visible="{= !${ui>/editMode}}" />
+                  <CheckBox selected="{tableData>IsAllowed}" enabled="true" visible="{ui>/editMode}" />
+                </HBox>
 
-                <Table
-                    id="routesTable"
-                    mode="MultiSelect"
-                    growing="true"
-                    growingScrollToLoad="true"
-                    inset="false"
-                    items="{
-                        path: '/MMRouteConf'
-                    }">
+                <!-- Inspector -->
+                <HBox>
+                  <Text text="{tableData>InspectorId}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
+                  <Input value="{tableData>InspectorId}" visible="{ui>/editMode}" width="100%"
+                    showValueHelp="true" valueHelpRequest=".onValueHelpInspector" />
+                </HBox>
 
-                    <columns>
-                    <Column width="8rem"><Text text="Status"/></Column>  
-                        <Column width="10rem"><Text text="Environment"/></Column>
-                        <Column width="10rem"><Text text="Plant"/></Column>
-                        <Column width="12rem"><Text text="Sending Warehouse"/></Column>
-                        <Column width="12rem"><Text text="Receiving Warehouse"/></Column>
-                        <Column width="10rem"><Text text="Transport Mode"/></Column>
-                        <Column width="8rem"><Text text="Allowed"/></Column>
-                        <Column width="10rem"><Text text="Inspector"/></Column>
-                        <Column width="8rem"><Text text="Version"/></Column>
-                        <Column width="14rem"><Text text="Change Note"/></Column>
-                    </columns>
+                <!-- Version (always read-only) -->
+                <Text text="{tableData>VersionNo}" class="mmrVersionBadge" textAlign="End" />
 
-                    <items>
-                        <ColumnListItem>
-                            <cells>
-                            <!-- Status badge — thêm vào đầu -->
-            <ObjectStatus
-                text="{= ${ActionType} === 'U' ? 'UPDATE' : 
-                       ${ActionType} === 'C' ? 'CREATE' : 
-                       ${ActionType} === 'D' ? 'DELETE' : '—' }"
-                state="{= ${ActionType} === 'U' ? 'Information' : 
-                          ${ActionType} === 'C' ? 'Success' : 
-                          ${ActionType} === 'D' ? 'Error' : 'None' }"/>
+                <!-- Change Note -->
+                <HBox>
+                  <Text text="{tableData>ChangeNote}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
+                  <Input value="{tableData>ChangeNote}" visible="{ui>/editMode}" width="100%" />
+                </HBox>
 
-            <!-- các cell cũ giữ nguyên -->
-                                <Input value="{EnvId}" editable="{ui>/editMode}"/>
-                                <Input value="{PlantId}" editable="{ui>/editMode}"/>
-                                <Input value="{SendWh}" editable="{ui>/editMode}"/>
-                                <Input value="{ReceiveWh}" editable="{ui>/editMode}"/>
-                                <Input value="{TransMode}" editable="{ui>/editMode}"/>
-                                <CheckBox selected="{IsAllowed}" enabled="{ui>/editMode}"/>
-                                <Input value="{InspectorId}" editable="{ui>/editMode}"/>
-                                <Input value="{VersionNo}" type="Number" editable="false"/>
-                                <Input value="{ChangeNote}" editable="{ui>/editMode}"/>
-                            </cells>
-                        </ColumnListItem>
-                    </items>
-                </Table>
+              </cells>
+            </ColumnListItem>
+          </items>
+        </Table>
 
-            </VBox>
-        </content>
-    </Page>
+      </VBox>
+    </f:content>
+
+  </f:DynamicPage>
 </mvc:View>
