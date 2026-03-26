@@ -46,7 +46,8 @@ sap.ui.define(
           this._oModel = this.getView().getModel() || this.getOwnerComponent().getModel();
 
           // JSONModel for table (delta approach — only changed rows go to req table)
-          this._aMainRows = [];
+          this._aMainRows  = [];
+          this._aFieldDef  = [];   // loaded from ZCONFFIELDDEF via catalog service
           this.getView().setModel(new JSONModel({ rows: [] }), "tableData");
 
           const oUIModel = new JSONModel({ editMode: true, requestCreated: false });
@@ -74,6 +75,10 @@ sap.ui.define(
           });
           this.getView().setModel(oRequestModel, "request");
 
+          if (oRequestContext.ConfId) {
+            this._fetchFieldDef(oRequestContext.ConfId);
+          }
+
           if (bHasReqId) {
             const bIsDraft = sStatus.toUpperCase() === "DRAFT";
             oUIModel.setProperty("/requestCreated", true);
@@ -81,6 +86,10 @@ sap.ui.define(
             this._fetchRequestHeader(oRequestContext.ReqId);
             this._fetchReqItem(oRequestContext.ReqId);
             this._loadMainTableWithOverlay(oRequestContext.EnvId, oRequestContext.ReqId);
+          } else if (oRequestContext.Mode === "VIEW") {
+            oUIModel.setProperty("/editMode", false);
+            oUIModel.setProperty("/viewOnly", true);
+            this._loadMainTable(oRequestContext.EnvId || "DEV");
           }
 
           console.log("requestContext =", oRequestContext);
@@ -276,6 +285,21 @@ sap.ui.define(
           const sTitle        = oRequestModel.getProperty("/ReqTitle") || "";
           const sReason       = oRequestModel.getProperty("/Reason")   || "";
 
+          // ── Frontend validation (mirrors ABAP validate_mandatory + validate_business) ──
+          const oTableModelV = oView.getModel("tableData");
+          const aAllRows     = oTableModelV.getProperty("/rows");
+          const aErrors      = this._validateRows(aAllRows);
+          oTableModelV.setProperty("/rows", aAllRows); // refresh valueState bindings
+
+          if (aErrors.length > 0) {
+            MessageBox.error(
+              "Please fix the following errors before saving:\n\n" + aErrors.join("\n"),
+              { title: "Validation Error" }
+            );
+            return;
+          }
+          // ─────────────────────────────────────────────────────────────────────────────
+
           oView.setBusy(true);
           try {
             const sCsrfToken = await this._fetchCsrfToken(
@@ -449,9 +473,15 @@ sap.ui.define(
         onSubmitRequest: function () {
           const oRequestModel = this.getView().getModel("request");
           const sReqId = oRequestModel.getProperty("/ReqId");
+          const sStatus = oRequestModel.getProperty("/Status");
 
           if (!sReqId) {
             MessageBox.warning("Request has not been created yet.");
+            return;
+          }
+
+          if (sStatus !== "DRAFT") {
+            MessageBox.warning("Only DRAFT requests can be submitted. Current status: " + sStatus);
             return;
           }
 
@@ -586,6 +616,112 @@ sap.ui.define(
 
         // ── Private helpers ──────────────────────────────────────────────
 
+        /**
+         * Extracts a human-readable message from an OData v4 error response body.
+         * RAP validation errors put the specific ABAP messages in error.details[],
+         * while error.message is always the generic "Resolve data inconsistencies…".
+         * We join all detail messages; fall back to error.message if details are absent.
+         */
+        /**
+         * Convert DB column name (PLANT_ID) → PascalCase JS key (PlantId).
+         * Used to map FieldName from ZCONFFIELDDEF to row object properties.
+         */
+        _dbToPascal: function (sDbName) {
+          return sDbName.toLowerCase()
+            .split("_")
+            .map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1); })
+            .join("");
+        },
+
+        /**
+         * Fetch field definitions for a given ConfId from the catalog service.
+         * Stores result in this._aFieldDef — used by _validateRows.
+         */
+        _fetchFieldDef: function (sConfId) {
+          const sUrl =
+            "/sap/opu/odata4/sap/zui_conf_catalog/srvd/sap/zsd_conf_catalog/0001/" +
+            "ConfigFieldDef?$filter=ConfId eq " + sConfId +
+            "&$select=FieldName,FieldLabel,IsRequired" +
+            "&sap-client=" + this._getSapClient();
+
+          fetch(sUrl, {
+            headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
+            credentials: "include",
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              this._aFieldDef = data.value || [];
+              console.log("[FieldDef] Loaded", this._aFieldDef.length, "field definitions for ConfId", sConfId);
+            }.bind(this))
+            .catch(function (e) {
+              console.warn("[FieldDef] Could not load field definitions:", e);
+            });
+        },
+
+        _extractODataError: function (oErr) {
+          const aDetails = oErr?.error?.details;
+          if (Array.isArray(aDetails) && aDetails.length > 0) {
+            return aDetails.map(function (d) { return d.message; }).join("\n");
+          }
+          return oErr?.error?.message || "Unknown error";
+        },
+
+        /**
+         * Validates non-deleted rows before save.
+         * Writes _vs_* / _vs_*Text properties onto each row object so the view's
+         * valueState bindings react immediately.
+         * Returns an array of human-readable error strings; empty array = all valid.
+         */
+        _validateRows: function (aRows) {
+          const aErrors  = [];
+          const aFieldDef = this._aFieldDef || [];
+
+          // Fallback: if field def not loaded yet, use hardcoded required fields
+          const aRequired = aFieldDef.length > 0
+            ? aFieldDef.filter(function (f) { return f.IsRequired; })
+            : [
+                { FieldName: "PLANT_ID",    FieldLabel: "Plant" },
+                { FieldName: "SEND_WH",     FieldLabel: "Sending WH" },
+                { FieldName: "RECEIVE_WH",  FieldLabel: "Receiving WH" },
+                { FieldName: "TRANS_MODE",  FieldLabel: "Transport Mode" },
+              ];
+
+          aRows.forEach(function (row, iIdx) {
+            // Clear all _vs_* states from previous run
+            Object.keys(row).forEach(function (k) {
+              if (k.startsWith("_vs_")) row[k] = "None";
+            });
+
+            const sRowNum = "Row " + (iIdx + 1);
+            const sSend   = (row.SendWh    || "").trim();
+            const sRecv   = (row.ReceiveWh || "").trim();
+
+            // Dynamic required-field check driven by ZCONFFIELDDEF
+            if (row._state !== "deleted") {
+              aRequired.forEach(function (fieldDef) {
+                const sJsKey = this._dbToPascal(fieldDef.FieldName);  // PLANT_ID → PlantId
+                const sVsKey = "_vs_" + sJsKey;                        // → _vs_PlantId
+                const sVal   = (row[sJsKey] || "").trim();
+                if (!sVal) {
+                  row[sVsKey] = "Error";
+                  aErrors.push(sRowNum + ": " + fieldDef.FieldLabel + " is required.");
+                }
+              }.bind(this));
+            }
+
+            // Business rule (mirrors ABAP validate_business): SendWh ≠ ReceiveWh
+            if (row._state !== "deleted" && sSend && sRecv && sSend === sRecv) {
+              row._vs_SendWh        = "Error";
+              row._vs_SendWhText    = "Sending WH must differ from Receiving WH";
+              row._vs_ReceiveWh     = "Error";
+              row._vs_ReceiveWhText = "Receiving WH must differ from Sending WH";
+              aErrors.push(sRowNum + ": Sending WH and Receiving WH must be different.");
+            }
+          });
+
+          return aErrors;
+        },
+
         _getMmRouteServiceUrl: function () {
           return "/sap/opu/odata4/sap/zui_mm_route_conf/srvd/sap/zsd_mm_route_conf/0001/";
         },
@@ -703,7 +839,7 @@ sap.ui.define(
           });
           if (!oActResp.ok) {
             const oActErr = await oActResp.json().catch(() => ({}));
-            throw new Error(oActErr?.error?.message || "Activate failed (" + oActResp.status + ") Key=" + sDraftKey);
+            throw new Error(this._extractODataError(oActErr) || "Activate failed (" + oActResp.status + ")");
           }
           return oActResp.json();
         },
@@ -776,7 +912,7 @@ sap.ui.define(
           });
           if (!oActResp.ok) {
             const oErr = await oActResp.json().catch(() => ({}));
-            throw new Error(oErr?.error?.message || "Activate failed (" + oActResp.status + ")");
+            throw new Error(this._extractODataError(oErr) || "Activate failed (" + oActResp.status + ")");
           }
         },
 
@@ -1004,7 +1140,7 @@ sap.ui.define(
             });
             this._oTransModeDialog.bindAggregation("items", {
               path: "/TransModeDef",
-              template: new StandardListItem({ title: "{TransMode}" }),
+              template: new StandardListItem({ title: "{TransMode}", description: "{Description}" }),
             });
             this.getView().addDependent(this._oTransModeDialog);
           }

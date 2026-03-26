@@ -23,7 +23,7 @@
             type="Accept"
             icon="sap-icon://paper-plane"
             press=".onSubmitRequest"
-            visible="{= ${ui>/requestCreated} &amp;&amp; !${ui>/editMode} }" />
+            visible="{= ${ui>/requestCreated} &amp;&amp; !${ui>/editMode} &amp;&amp; ${request>/Status} === 'DRAFT' }" />
           <Button
             text="Save Draft"
             type="Emphasized"
@@ -141,39 +141,39 @@
             type="Emphasized"
             icon="sap-icon://add-document"
             press=".onCreateRequest"
-            visible="{= !${ui>/requestCreated} }" />
+            visible="{= !${ui>/requestCreated} &amp;&amp; !${ui>/viewOnly} }" />
 
           <Button
             text="Edit"
             icon="sap-icon://edit"
             press=".onEdit"
-            visible="{= ${ui>/requestCreated} &amp;&amp; !${ui>/editMode} }" />
+            visible="{= ${ui>/requestCreated} &amp;&amp; !${ui>/editMode} &amp;&amp; !${ui>/viewOnly} }" />
 
           <Button
             text="Add Line"
             icon="sap-icon://add"
             press=".onCreate"
-            visible="{ui>/editMode}" />
+            visible="{= ${ui>/editMode} &amp;&amp; !${ui>/viewOnly} }" />
 
           <Button
             text="Delete"
             icon="sap-icon://delete"
             type="Reject"
             press=".onDelete"
-            visible="{ui>/editMode}" />
+            visible="{= ${ui>/editMode} &amp;&amp; !${ui>/viewOnly} }" />
 
           <Button
             text="Cancel"
             icon="sap-icon://sys-cancel"
             press=".onCancel"
-            visible="{ui>/editMode}" />
+            visible="{= ${ui>/editMode} &amp;&amp; !${ui>/viewOnly} }" />
 
           <Button
             icon="sap-icon://refresh"
             tooltip="Refresh"
             type="Transparent"
             press=".onRefresh"
-            visible="{= ${ui>/requestCreated} &amp;&amp; !${ui>/editMode} }" />
+            visible="{= !${ui>/editMode} }" />
         </OverflowToolbar>
 
         <!-- Filter Panel -->
@@ -279,6 +279,9 @@
                 <HBox>
                   <Text text="{tableData>PlantId}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
                   <Input value="{tableData>PlantId}" visible="{ui>/editMode}" width="100%"
+                    maxLength="10"
+                    valueState="{tableData>_vs_PlantId}"
+                    valueStateText="Plant is required"
                     showValueHelp="true" valueHelpRequest=".onValueHelpPlantCell" />
                 </HBox>
 
@@ -286,6 +289,9 @@
                 <HBox>
                   <Text text="{tableData>SendWh}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
                   <Input value="{tableData>SendWh}" visible="{ui>/editMode}" width="100%"
+                    maxLength="10"
+                    valueState="{tableData>_vs_SendWh}"
+                    valueStateText="{tableData>_vs_SendWhText}"
                     showValueHelp="true" valueHelpRequest=".onValueHelpSendWh" />
                 </HBox>
 
@@ -293,6 +299,9 @@
                 <HBox>
                   <Text text="{tableData>ReceiveWh}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
                   <Input value="{tableData>ReceiveWh}" visible="{ui>/editMode}" width="100%"
+                    maxLength="10"
+                    valueState="{tableData>_vs_ReceiveWh}"
+                    valueStateText="{tableData>_vs_ReceiveWhText}"
                     showValueHelp="true" valueHelpRequest=".onValueHelpRecvWh" />
                 </HBox>
 
@@ -300,6 +309,9 @@
                 <HBox>
                   <Text text="{tableData>TransMode}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
                   <Input value="{tableData>TransMode}" visible="{ui>/editMode}" width="100%"
+                    maxLength="20"
+                    valueState="{tableData>_vs_TransMode}"
+                    valueStateText="Transport Mode is required"
                     showValueHelp="true" valueHelpRequest=".onValueHelpTransMode" />
                 </HBox>
 
@@ -316,6 +328,7 @@
                 <HBox>
                   <Text text="{tableData>InspectorId}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
                   <Input value="{tableData>InspectorId}" visible="{ui>/editMode}" width="100%"
+                    maxLength="12"
                     showValueHelp="true" valueHelpRequest=".onValueHelpInspector" />
                 </HBox>
 
@@ -325,7 +338,8 @@
                 <!-- Change Note -->
                 <HBox>
                   <Text text="{tableData>ChangeNote}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
-                  <Input value="{tableData>ChangeNote}" visible="{ui>/editMode}" width="100%" />
+                  <Input value="{tableData>ChangeNote}" visible="{ui>/editMode}" width="100%"
+                    maxLength="255" />
                 </HBox>
 
               </cells>
