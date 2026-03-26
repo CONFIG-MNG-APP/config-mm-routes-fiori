@@ -313,6 +313,12 @@ sap.ui.define(
             const sReqItemId = oRequestModel.getProperty("/ReqItemId") || "";
             const sConfId    = oRequestModel.getProperty("/ConfId")    || "";
 
+            if (!sReqItemId) {
+              oView.setBusy(false);
+              MessageBox.error("Cannot save: Request item data could not be loaded from the server. Please refresh the page and try again.");
+              return;
+            }
+
             // Build lookup of original main table values (for OldXxx fields)
             const mOrig = {};
             this._aMainRows.forEach(r => { mOrig[r.ItemId] = r; });
@@ -503,9 +509,10 @@ sap.ui.define(
                 const sReason = oRequestModel.getProperty("/Reason")   || "";
                 await this._patchRequestHeader(sReqId, sTitle, sReason);
 
+                const sEnvId = this.getView().getModel("requestContext").getProperty("/EnvId") || "DEV";
                 const sActionUrl =
                   "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/" +
-                  "ZC_CONF_REQ_H(ReqId=" + sReqId + ",IsActiveEntity=true)/" +
+                  "ZC_CONF_REQ_H(ReqId=" + sReqId + ",EnvId='" + sEnvId + "',IsActiveEntity=true)/" +
                   "com.sap.gateway.srvd.zsd_conf_req.v0001.submit" +
                   "?sap-client=" + sSapClient;
 
@@ -693,15 +700,15 @@ sap.ui.define(
             });
 
             const sRowNum = "Row " + (iIdx + 1);
-            const sSend   = (row.SendWh    || "").trim();
-            const sRecv   = (row.ReceiveWh || "").trim();
+            const sSend   = String(row.SendWh    ?? "").trim();
+            const sRecv   = String(row.ReceiveWh ?? "").trim();
 
             // Dynamic required-field check driven by ZCONFFIELDDEF
             if (row._state !== "deleted") {
               aRequired.forEach(function (fieldDef) {
                 const sJsKey = this._dbToPascal(fieldDef.FieldName);  // PLANT_ID → PlantId
                 const sVsKey = "_vs_" + sJsKey;                        // → _vs_PlantId
-                const sVal   = (row[sJsKey] || "").trim();
+                const sVal   = String(row[sJsKey] ?? "").trim();
                 if (!sVal) {
                   row[sVsKey] = "Error";
                   aErrors.push(sRowNum + ": " + fieldDef.FieldLabel + " is required.");
@@ -717,7 +724,7 @@ sap.ui.define(
               row._vs_ReceiveWhText = "Receiving WH must differ from Sending WH";
               aErrors.push(sRowNum + ": Sending WH and Receiving WH must be different.");
             }
-          });
+          }.bind(this));
 
           return aErrors;
         },
@@ -924,9 +931,10 @@ sap.ui.define(
 
         _fetchRequestHeader: async function (sReqId) {
           try {
+            const sEnvId = this.getView().getModel("requestContext").getProperty("/EnvId") || "DEV";
             const sUrl =
               "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/" +
-              "ZC_CONF_REQ_H(ReqId=" + sReqId + ",IsActiveEntity=true)" +
+              "ZC_CONF_REQ_H(ReqId=" + sReqId + ",EnvId='" + sEnvId + "',IsActiveEntity=true)" +
               "?$select=ReqId,ReqTitle,Reason,Status" +
               "&sap-client=" + this._getSapClient();
             const oResp = await fetch(sUrl, {
@@ -943,9 +951,10 @@ sap.ui.define(
 
         _fetchReqItem: async function (sReqId) {
           try {
+            const sEnvId = this.getView().getModel("requestContext").getProperty("/EnvId") || "DEV";
             const sUrl =
               "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/" +
-              "ZC_CONF_REQ_H(ReqId=" + sReqId + ",IsActiveEntity=true)/_Items" +
+              "ZC_CONF_REQ_H(ReqId=" + sReqId + ",EnvId='" + sEnvId + "',IsActiveEntity=true)/_Items" +
               "?$select=ReqItemId,ConfId&$top=1&sap-client=" + this._getSapClient();
             const oResp = await fetch(sUrl, {
               headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
@@ -967,9 +976,10 @@ sap.ui.define(
             "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/?sap-client=" + this._getSapClient();
           const sCsrfToken = await this._fetchCsrfToken(sServiceUrl);
           if (!sCsrfToken) return;
+          const sEnvId = this.getView().getModel("requestContext").getProperty("/EnvId") || "DEV";
           const sUrl =
             "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/" +
-            "ZC_CONF_REQ_H(ReqId=" + sReqId + ",IsActiveEntity=true)" +
+            "ZC_CONF_REQ_H(ReqId=" + sReqId + ",EnvId='" + sEnvId + "',IsActiveEntity=true)" +
             "?sap-client=" + this._getSapClient();
           await fetch(sUrl, {
             method: "PATCH",
