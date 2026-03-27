@@ -8,6 +8,7 @@ sap.ui.define(
     "sap/ui/model/FilterOperator",
     "sap/m/SelectDialog",
     "sap/m/StandardListItem",
+    "./ExcelImport",
   ],
   function (
     Controller,
@@ -18,6 +19,7 @@ sap.ui.define(
     FilterOperator,
     SelectDialog,
     StandardListItem,
+    ExcelImport,
   ) {
     "use strict";
 
@@ -243,6 +245,114 @@ sap.ui.define(
           this._applyBaseFilter();
           MessageToast.show("New row added — fill in the fields and save.");
         },
+
+        /* ── Import from Excel ─────────────────────────────── */
+
+        _xlsxPromise: null,
+
+        _ensureXlsxLoaded: function () {
+          if (window.XLSX) return Promise.resolve();
+          if (this._xlsxPromise) return this._xlsxPromise;
+
+          var sPath = sap.ui.require.toUrl(
+            "zgsp26/conf/mng/mmroutes/confmngfemmroutes/lib/xlsx.min"
+          ) + ".js";
+
+          this._xlsxPromise = new Promise(function (resolve, reject) {
+            var oScript = document.createElement("script");
+            oScript.src = sPath;
+            oScript.onload = resolve;
+            oScript.onerror = function () { reject(new Error("Failed to load SheetJS library")); };
+            document.head.appendChild(oScript);
+          });
+          return this._xlsxPromise;
+        },
+
+        onImportFromExcel: function () {
+          var that = this;
+          var sReqId = this.getView().getModel("request").getProperty("/ReqId");
+          if (!sReqId) {
+            MessageBox.warning("Please create a request first before importing.");
+            return;
+          }
+
+          this._ensureXlsxLoaded().then(function () {
+            var oInput = document.createElement("input");
+            oInput.type = "file";
+            oInput.accept = ".xls,.xlsx,.csv";
+            oInput.style.display = "none";
+            document.body.appendChild(oInput);
+
+            oInput.addEventListener("change", function (oEvent) {
+              var oFile = oEvent.target.files[0];
+              if (!oFile) { document.body.removeChild(oInput); return; }
+
+              var oReader = new FileReader();
+              oReader.onload = function (e) {
+                try {
+                  that._processExcelData(e.target.result);
+                } catch (err) {
+                  MessageBox.error("Could not read the Excel file: " + err.message);
+                }
+                document.body.removeChild(oInput);
+              };
+              oReader.onerror = function () {
+                MessageBox.error("Failed to read file.");
+                document.body.removeChild(oInput);
+              };
+              oReader.readAsArrayBuffer(oFile);
+            });
+
+            oInput.click();
+          }).catch(function (err) {
+            MessageBox.error("Failed to load Excel library: " + err.message);
+          });
+        },
+
+        _processExcelData: function (arrayBuffer) {
+          var workbook = XLSX.read(arrayBuffer, { type: "array" });
+          var sEnvId = this.getView().getModel("requestContext").getProperty("/EnvId") || "DEV";
+          var result = ExcelImport.parseWorkbook(workbook, sEnvId);
+
+          if (result.errors.length && !result.rows.length) {
+            MessageBox.error(result.errors.join("\n"));
+            return;
+          }
+
+          if (result.rows.length > 500) {
+            var that = this;
+            MessageBox.confirm(
+              "The file contains " + result.rows.length + " rows. This may take a moment. Continue?",
+              {
+                onClose: function (sAction) {
+                  if (sAction === "OK") { that._insertImportedRows(result); }
+                }
+              }
+            );
+            return;
+          }
+
+          this._insertImportedRows(result);
+        },
+
+        _insertImportedRows: function (result) {
+          var oTableModel = this.getView().getModel("tableData");
+          var aRows = oTableModel.getProperty("/rows");
+
+          for (var i = result.rows.length - 1; i >= 0; i--) {
+            aRows.unshift(result.rows[i]);
+          }
+          oTableModel.setProperty("/rows", aRows);
+          this._applyBaseFilter();
+
+          var sMsg = result.rows.length + " row(s) imported from Excel.";
+          if (result.skipped > 0) {
+            sMsg += "\n" + result.skipped + " row(s) skipped (empty).";
+          }
+          MessageToast.show(sMsg);
+        },
+
+        /* ── End Import from Excel ─────────────────────────── */
 
         onDelete: function () {
           const oTable = this.byId("routesTable");

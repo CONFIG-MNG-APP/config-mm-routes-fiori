@@ -156,6 +156,12 @@
             visible="{= ${ui>/editMode} &amp;&amp; !${ui>/viewOnly} }" />
 
           <Button
+            text="Import Excel"
+            icon="sap-icon://upload-to-cloud"
+            press=".onImportFromExcel"
+            visible="{= ${ui>/editMode} &amp;&amp; !${ui>/viewOnly} }" />
+
+          <Button
             text="Delete"
             icon="sap-icon://delete"
             type="Reject"
