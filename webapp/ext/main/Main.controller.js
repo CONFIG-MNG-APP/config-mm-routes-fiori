@@ -888,9 +888,13 @@ sap.ui.define(
           const aMain = oMainResp.ok ? ((await oMainResp.json()).value || []) : [];
           const aReq  = oReqResp.ok  ? ((await oReqResp.json()).value  || []) : [];
 
-          // Map: SourceItemId → req row (for U and X rows)
+          // ABAP returns "00000000-0000-0000-0000-000000000000" for initial UUID fields,
+          // not null. Treat that as "no source" (i.e. a CREATE row).
+          const isBlankId = id => !id || id === "00000000-0000-0000-0000-000000000000";
+
+          // Map: SourceItemId → req row (for U and X rows only)
           const mReq = {};
-          aReq.forEach(r => { if (r.SourceItemId) mReq[r.SourceItemId] = r; });
+          aReq.forEach(r => { if (!isBlankId(r.SourceItemId)) mReq[r.SourceItemId] = r; });
 
           // Merge: main rows overlaid with any saved delta
           const aRows = aMain.map(mainRow => {
@@ -905,8 +909,8 @@ sap.ui.define(
             return { ...mainRow, ActionType: "", ChangeNote: "", _state: "unchanged", _reqItemId: null };
           });
 
-          // Append CREATE-only rows (no SourceItemId in req table)
-          aReq.filter(r => !r.SourceItemId).forEach(r => {
+          // Append CREATE-only rows (SourceItemId blank or all-zeros)
+          aReq.filter(r => isBlankId(r.SourceItemId)).forEach(r => {
             aRows.push({ ...r, _state: "new", _reqItemId: { ReqId: r.ReqId, ReqItemId: r.ReqItemId, ItemId: r.ItemId } });
           });
 
