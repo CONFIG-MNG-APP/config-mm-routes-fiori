@@ -52,7 +52,7 @@ sap.ui.define(
           this._aFieldDef  = [];   // loaded from ZCONFFIELDDEF via catalog service
           this.getView().setModel(new JSONModel({ rows: [] }), "tableData");
 
-          const oUIModel = new JSONModel({ editMode: true, requestCreated: false });
+          const oUIModel = new JSONModel({ editMode: true, requestCreated: false, viewOnly: false });
           this.getView().setModel(oUIModel, "ui");
 
           const oFilterModel = new JSONModel({
@@ -85,6 +85,7 @@ sap.ui.define(
             const bIsDraft = sStatus.toUpperCase() === "DRAFT";
             oUIModel.setProperty("/requestCreated", true);
             oUIModel.setProperty("/editMode", bIsDraft);
+            oUIModel.setProperty("/viewOnly", !bIsDraft);
             this._fetchRequestHeader(oRequestContext.ReqId);
             this._fetchReqItem(oRequestContext.ReqId);
             this._loadMainTableWithOverlay(oRequestContext.EnvId, oRequestContext.ReqId);
@@ -693,8 +694,7 @@ sap.ui.define(
           const oBinding    = oTable.getBinding("items");
           const oFilterData = this.getView().getModel("filter").getData();
 
-          // Always exclude deleted rows from view
-          const aFilters = [new Filter("_state", FilterOperator.NE, "deleted")];
+          const aFilters = [];
 
           if (oFilterData.EnvId)
             aFilters.push(new Filter("EnvId", FilterOperator.Contains, oFilterData.EnvId));
@@ -1037,10 +1037,9 @@ sap.ui.define(
           }
         },
 
-        /** Apply base filter: hide deleted rows */
         _applyBaseFilter: function () {
           const oBinding = this.byId("routesTable").getBinding("items");
-          if (oBinding) oBinding.filter([new Filter("_state", FilterOperator.NE, "deleted")]);
+          if (oBinding) oBinding.filter([]);
         },
 
         _fetchRequestHeader: async function (sReqId) {

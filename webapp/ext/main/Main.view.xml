@@ -4,6 +4,7 @@
     xmlns="sap.m"
     xmlns:core="sap.ui.core"
     xmlns:f="sap.f"
+    xmlns:plugins="sap.m.plugins"
     displayBlock="true">
 
   <f:DynamicPage id="mainPage" toggleHeaderOnTitleClick="false" headerPinned="true">
@@ -234,35 +235,39 @@
           class="mmrRoutesTable"
           items="{path: 'tableData>/rows'}">
 
+          <dependents>
+            <plugins:ColumnResizer />
+          </dependents>
+
           <columns>
-            <Column width="8rem">
+            <Column width="7rem">
               <Text text="Action" />
             </Column>
-            <Column width="7rem">
+            <Column width="6rem">
               <Text text="Env" />
             </Column>
-            <Column width="11rem">
+            <Column width="9rem">
               <Text text="Plant" />
             </Column>
-            <Column width="10rem" minScreenWidth="Tablet" demandPopin="true">
+            <Column width="9rem" minScreenWidth="Tablet" demandPopin="true">
               <Text text="Send WH" />
             </Column>
-            <Column width="10rem" minScreenWidth="Tablet" demandPopin="true">
+            <Column width="9rem" minScreenWidth="Tablet" demandPopin="true">
               <Text text="Recv WH" />
             </Column>
-            <Column width="10rem" minScreenWidth="Tablet" demandPopin="true">
+            <Column width="9rem" minScreenWidth="Tablet" demandPopin="true">
               <Text text="Transport" />
             </Column>
-            <Column width="8rem" hAlign="Center">
+            <Column width="7rem" hAlign="Center">
               <Text text="Allowed" />
             </Column>
-            <Column width="10rem" minScreenWidth="Large" demandPopin="true">
+            <Column width="9rem" minScreenWidth="Large" demandPopin="true">
               <Text text="Inspector" />
             </Column>
             <Column width="5rem" minScreenWidth="Large" demandPopin="true" hAlign="End">
               <Text text="Ver." />
             </Column>
-            <Column minScreenWidth="Large" demandPopin="true">
+            <Column width="14rem" minScreenWidth="Large" demandPopin="true">
               <Text text="Change Note" />
             </Column>
           </columns>
@@ -343,7 +348,7 @@
 
                 <!-- Change Note -->
                 <HBox>
-                  <Text text="{tableData>ChangeNote}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
+                  <Text text="{tableData>ChangeNote}" visible="{= !${ui>/editMode}}" class="mmrCellText" wrapping="true" />
                   <Input value="{tableData>ChangeNote}" visible="{ui>/editMode}" width="100%"
                     maxLength="255" />
                 </HBox>
