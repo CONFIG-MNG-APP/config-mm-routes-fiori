@@ -1,6 +1,6 @@
 sap.ui.define(
   [
-    "sap/ui/core/mvc/Controller",
+    "zgsp26/conf/mng/mmroutes/confmngfemmroutes/ext/shared/ConfMngBaseController",
     "sap/m/MessageToast",
     "sap/m/MessageBox",
     "sap/ui/model/json/JSONModel",
@@ -8,10 +8,10 @@ sap.ui.define(
     "sap/ui/model/FilterOperator",
     "sap/m/SelectDialog",
     "sap/m/StandardListItem",
-    "./ExcelImport",
+    "../shared/ExcelImport",
   ],
   function (
-    Controller,
+    BaseController,
     MessageToast,
     MessageBox,
     JSONModel,
@@ -23,24 +23,66 @@ sap.ui.define(
   ) {
     "use strict";
 
-    return Controller.extend(
+    return BaseController.extend(
       "zgsp26.conf.mng.mmroutes.confmngfemmroutes.ext.main.Main",
       {
-        _getUrlParams: function () {
-          let sQuery = window.location.search || "";
-          if (!sQuery && window.location.hash.indexOf("?") > -1) {
-            sQuery = window.location.hash.substring(window.location.hash.indexOf("?"));
-          }
-          const oParams = new URLSearchParams(sQuery);
+        // ── Abstract overrides ────────────────────────────────────────────
+        _getModuleId:  function () { return "MM"; },
+        _getConfName:  function () { return "MM Route Configuration"; },
+        _getTargetCds: function () { return "ZI_MM_ROUTE_CONF"; },
+
+        // ── Excel import config (MM Routes specific) ──────────────────────
+        _getExcelImportConfig: function () {
           return {
-            ReqId:     oParams.get("ReqId")     || "",
-            ConfId:    oParams.get("ConfId")     || "",
-            ConfName:  oParams.get("ConfName")   || "",
-            ModuleId:  oParams.get("ModuleId")   || "",
-            TargetCds: oParams.get("TargetCds")  || "",
-            Status:    oParams.get("Status")     || "",
-            EnvId:     oParams.get("EnvId")      || "DEV",
-            Mode:      oParams.get("Mode") || oParams.get("mode") || "",
+            headerMap: {
+              "plant":           "PlantId",
+              "plantid":         "PlantId",
+              "plant_id":        "PlantId",
+              "plant id":        "PlantId",
+              "sendwh":          "SendWh",
+              "send wh":         "SendWh",
+              "send_wh":         "SendWh",
+              "sending wh":      "SendWh",
+              "recvwh":          "ReceiveWh",
+              "recv wh":         "ReceiveWh",
+              "receivewh":       "ReceiveWh",
+              "receive wh":      "ReceiveWh",
+              "receive_wh":      "ReceiveWh",
+              "receiving wh":    "ReceiveWh",
+              "transport":       "TransMode",
+              "transmode":       "TransMode",
+              "trans_mode":      "TransMode",
+              "transport mode":  "TransMode",
+              "allowed":         "IsAllowed",
+              "isallowed":       "IsAllowed",
+              "is_allowed":      "IsAllowed",
+              "inspector":       "InspectorId",
+              "inspectorid":     "InspectorId",
+              "inspector_id":    "InspectorId",
+              "inspector id":    "InspectorId",
+              "changenote":      "ChangeNote",
+              "change note":     "ChangeNote",
+              "change_note":     "ChangeNote",
+              "note":            "ChangeNote",
+            },
+            boolFields: ["IsAllowed"],
+            buildRow: function (sEnvId) {
+              return {
+                ItemId:      "",
+                EnvId:       sEnvId || "DEV",
+                PlantId:     "",
+                SendWh:      "",
+                ReceiveWh:   "",
+                TransMode:   "",
+                IsAllowed:   false,
+                InspectorId: "",
+                ChangeNote:  "",
+                VersionNo:   0,
+                ActionType:  "C",
+                _state:      "new",
+                _reqItemId:  null,
+              };
+            },
           };
         },
 
@@ -96,105 +138,6 @@ sap.ui.define(
           }
 
           console.log("requestContext =", oRequestContext);
-        },
-
-        onCreateRequest: async function () {
-          const oView           = this.getView();
-          const oRequestContext = oView.getModel("requestContext").getData();
-          const oRequestModel   = oView.getModel("request");
-          const sReason         = oRequestModel.getProperty("/Reason");
-
-          if (!sReason || !sReason.trim()) {
-            MessageBox.warning("Please enter Reason before creating request.");
-            return;
-          }
-          if (!oRequestContext.ConfId) {
-            MessageBox.error("ConfId is missing. Cannot create request.");
-            return;
-          }
-
-          try {
-            oView.setBusy(true);
-
-            const sSapClient = this._getSapClient();
-            const sServiceUrl =
-              "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/?sap-client=" + sSapClient;
-            const sCsrfToken = await this._fetchCsrfToken(sServiceUrl);
-            if (!sCsrfToken) { MessageBox.error("Cannot fetch CSRF token"); return; }
-
-            const sActionUrl =
-              "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/" +
-              "ZC_CONF_REQ_H/com.sap.gateway.srvd.zsd_conf_req.v0001.createRequest" +
-              "?sap-client=" + sSapClient;
-
-            const oResponse = await fetch(sActionUrl, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-Token": sCsrfToken,
-                "X-Requested-With": "XMLHttpRequest",
-                Accept: "application/json",
-              },
-              credentials: "include",
-              body: JSON.stringify({
-                ConfId:      oRequestContext.ConfId,
-                ModuleId:    oRequestContext.ModuleId  || "MM",
-                ConfName:    oRequestContext.ConfName  || "MM Route Configuration",
-                TargetCds:   oRequestContext.TargetCds || "ZI_MM_ROUTE_CONF",
-                ActionType:  "U",
-                TargetEnvId: oRequestContext.EnvId     || "DEV",
-                Reason:      sReason.trim(),
-                Notes:       "",
-              }),
-            });
-
-            if (!oResponse.ok) {
-              const oErr = await oResponse.json().catch(() => ({}));
-              MessageBox.error(oErr?.error?.message || "createRequest failed: " + oResponse.status);
-              return;
-            }
-
-            const sQueryUrl =
-              "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/" +
-              "ZC_CONF_REQ_H?$filter=ConfId eq " + oRequestContext.ConfId +
-              "&$orderby=CreatedAt desc&$top=1&$select=ReqId,Status&sap-client=" + sSapClient;
-
-            const oQueryResp = await fetch(sQueryUrl, {
-              headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
-              credentials: "include",
-            });
-            if (!oQueryResp.ok) { MessageBox.error("Request created but could not retrieve ReqId"); return; }
-
-            const oQueryData = await oQueryResp.json();
-            const aResults   = oQueryData?.value || [];
-            if (!aResults.length || !aResults[0].ReqId) {
-              MessageBox.error("Request created but ReqId not found");
-              return;
-            }
-
-            const sNewReqId = aResults[0].ReqId;
-            oRequestModel.setProperty("/ReqId", sNewReqId);
-            oRequestModel.setProperty("/Status", "Draft");
-            oRequestModel.setProperty("/StatusState", "Information");
-            oView.getModel("ui").setProperty("/requestCreated", true);
-            oView.getModel("ui").setProperty("/editMode", true);
-
-            await this._fetchReqItem(sNewReqId);
-
-            // Load main table for editing — no snapshot, only changed rows will be saved
-            await this._loadMainTable(oRequestContext.EnvId || "DEV");
-
-            MessageToast.show("Request created. Edit what you need, then Save.");
-          } catch (e) {
-            console.error(e);
-            MessageBox.error(e?.message || "Failed to create request.");
-          } finally {
-            oView.setBusy(false);
-          }
-        },
-
-        onEdit: function () {
-          this.getView().getModel("ui").setProperty("/editMode", true);
         },
 
         onCancel: async function () {
@@ -313,7 +256,7 @@ sap.ui.define(
         _processExcelData: function (arrayBuffer) {
           var workbook = XLSX.read(arrayBuffer, { type: "array" });
           var sEnvId = this.getView().getModel("requestContext").getProperty("/EnvId") || "DEV";
-          var result = ExcelImport.parseWorkbook(workbook, sEnvId);
+          var result = ExcelImport.parseWorkbook(workbook, sEnvId, this._getExcelImportConfig());
 
           if (result.errors.length && !result.rows.length) {
             MessageBox.error(result.errors.join("\n"));
@@ -587,89 +530,6 @@ sap.ui.define(
           }
         },
 
-        onSubmitRequest: function () {
-          const oRequestModel = this.getView().getModel("request");
-          const sReqId = oRequestModel.getProperty("/ReqId");
-          const sStatus = oRequestModel.getProperty("/Status");
-
-          if (!sReqId) {
-            MessageBox.warning("Request has not been created yet.");
-            return;
-          }
-
-          if (sStatus !== "DRAFT") {
-            MessageBox.warning("Only DRAFT requests can be submitted. Current status: " + sStatus);
-            return;
-          }
-
-          MessageBox.confirm("Submit this request for approval?", {
-            onClose: async (sAction) => {
-              if (sAction !== "OK") return;
-
-              const oView = this.getView();
-              try {
-                oView.setBusy(true);
-
-                const sSapClient = this._getSapClient();
-                const sServiceUrl =
-                  "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/?sap-client=" + sSapClient;
-                const sCsrfToken = await this._fetchCsrfToken(sServiceUrl);
-                if (!sCsrfToken) { MessageBox.error("Cannot fetch CSRF token"); return; }
-
-                const sTitle  = oRequestModel.getProperty("/ReqTitle") || "";
-                const sReason = oRequestModel.getProperty("/Reason")   || "";
-                await this._patchRequestHeader(sReqId, sTitle, sReason);
-
-                const sEnvId = this.getView().getModel("requestContext").getProperty("/EnvId") || "DEV";
-                const sActionUrl =
-                  "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/" +
-                  "ZC_CONF_REQ_H(ReqId=" + sReqId + ",EnvId='" + sEnvId + "',IsActiveEntity=true)/" +
-                  "com.sap.gateway.srvd.zsd_conf_req.v0001.submit" +
-                  "?sap-client=" + sSapClient;
-
-                const oResponse = await fetch(sActionUrl, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-Token": sCsrfToken,
-                    "X-Requested-With": "XMLHttpRequest",
-                    Accept: "application/json",
-                  },
-                  credentials: "include",
-                  body: JSON.stringify({}),
-                });
-
-                if (!oResponse.ok) {
-                  const oErr = await oResponse.json().catch(() => ({}));
-                  MessageBox.error(oErr?.error?.message || "Submit failed: " + oResponse.status);
-                  return;
-                }
-
-                oRequestModel.setProperty("/Status", "SUBMITTED");
-                oRequestModel.setProperty("/StatusState", "Success");
-                oView.getModel("ui").setProperty("/editMode", false);
-
-                const sConfName = oView.getModel("requestContext").getProperty("/ConfName") || "Configuration";
-                MessageBox.success(
-                  "Request \"" + (sTitle || sReqId) + "\" has been submitted for approval.\n\n" +
-                  "Your manager will review the proposed changes to \"" + sConfName + "\" and approve or reject them.",
-                  {
-                    title: "Request Submitted Successfully",
-                    actions: [MessageBox.Action.OK],
-                    emphasizedAction: MessageBox.Action.OK,
-                    onClose: function () { window.history.back(); },
-                  }
-                );
-              } catch (e) {
-                console.error(e);
-                MessageBox.error(e?.message || "Submit failed");
-              } finally {
-                oView.setBusy(false);
-              }
-            },
-          });
-        },
-
         onRefresh: async function () {
           const sReqId = this.getView().getModel("request").getProperty("/ReqId");
           const sEnvId = this.getView().getModel("requestContext").getProperty("/EnvId") || "DEV";
@@ -732,56 +592,6 @@ sap.ui.define(
         },
 
         // ── Private helpers ──────────────────────────────────────────────
-
-        /**
-         * Extracts a human-readable message from an OData v4 error response body.
-         * RAP validation errors put the specific ABAP messages in error.details[],
-         * while error.message is always the generic "Resolve data inconsistencies…".
-         * We join all detail messages; fall back to error.message if details are absent.
-         */
-        /**
-         * Convert DB column name (PLANT_ID) → PascalCase JS key (PlantId).
-         * Used to map FieldName from ZCONFFIELDDEF to row object properties.
-         */
-        _dbToPascal: function (sDbName) {
-          return sDbName.toLowerCase()
-            .split("_")
-            .map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1); })
-            .join("");
-        },
-
-        /**
-         * Fetch field definitions for a given ConfId from the catalog service.
-         * Stores result in this._aFieldDef — used by _validateRows.
-         */
-        _fetchFieldDef: function (sConfId) {
-          const sUrl =
-            "/sap/opu/odata4/sap/zui_conf_catalog/srvd/sap/zsd_conf_catalog/0001/" +
-            "ConfigFieldDef?$filter=ConfId eq " + sConfId +
-            "&$select=FieldName,FieldLabel,IsRequired" +
-            "&sap-client=" + this._getSapClient();
-
-          fetch(sUrl, {
-            headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
-            credentials: "include",
-          })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-              this._aFieldDef = data.value || [];
-              console.log("[FieldDef] Loaded", this._aFieldDef.length, "field definitions for ConfId", sConfId);
-            }.bind(this))
-            .catch(function (e) {
-              console.warn("[FieldDef] Could not load field definitions:", e);
-            });
-        },
-
-        _extractODataError: function (oErr) {
-          const aDetails = oErr?.error?.details;
-          if (Array.isArray(aDetails) && aDetails.length > 0) {
-            return aDetails.map(function (d) { return d.message; }).join("\n");
-          }
-          return oErr?.error?.message || "Unknown error";
-        },
 
         /**
          * Validates non-deleted rows before save.
@@ -887,6 +697,9 @@ sap.ui.define(
 
           const aMain = oMainResp.ok ? ((await oMainResp.json()).value || []) : [];
           const aReq  = oReqResp.ok  ? ((await oReqResp.json()).value  || []) : [];
+          console.log("[MMRoute] aMain count:", aMain.length, "aReq count:", aReq.length);
+          console.log("[MMRoute] aReq rows:", JSON.stringify(aReq.map(r => ({ ActionType: r.ActionType, SourceItemId: r.SourceItemId, ItemId: r.ItemId }))));
+          console.log("[MMRoute] aMain ItemIds:", aMain.map(r => r.ItemId));
 
           // ABAP returns "00000000-0000-0000-0000-000000000000" for initial UUID fields,
           // not null. Treat that as "no source" (i.e. a CREATE row).
@@ -913,6 +726,14 @@ sap.ui.define(
           aReq.filter(r => isBlankId(r.SourceItemId)).forEach(r => {
             aRows.push({ ...r, _state: "new", _reqItemId: { ReqId: r.ReqId, ReqItemId: r.ReqItemId, ItemId: r.ItemId } });
           });
+
+          // Append DELETE rows whose source no longer exists in MMRouteMain
+          // (already promoted — row was removed from live table, but history must remain visible)
+          const aMainIds = new Set(aMain.map(r => r.ItemId));
+          aReq.filter(r => r.ActionType === "X" && !isBlankId(r.SourceItemId) && !aMainIds.has(r.SourceItemId))
+            .forEach(r => {
+              aRows.push({ ...r, _state: "deleted", _reqItemId: { ReqId: r.ReqId, ReqItemId: r.ReqItemId, ItemId: r.ItemId } });
+            });
 
           this._aMainRows = aMain.map(r => ({ ...r }));
           this.getView().getModel("tableData").setProperty("/rows", aRows);
@@ -1040,84 +861,6 @@ sap.ui.define(
         _applyBaseFilter: function () {
           const oBinding = this.byId("routesTable").getBinding("items");
           if (oBinding) oBinding.filter([]);
-        },
-
-        _fetchRequestHeader: async function (sReqId) {
-          try {
-            const sEnvId = this.getView().getModel("requestContext").getProperty("/EnvId") || "DEV";
-            const sUrl =
-              "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/" +
-              "ZC_CONF_REQ_H(ReqId=" + sReqId + ",EnvId='" + sEnvId + "',IsActiveEntity=true)" +
-              "?$select=ReqId,ReqTitle,Reason,Status" +
-              "&sap-client=" + this._getSapClient();
-            const oResp = await fetch(sUrl, {
-              headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
-              credentials: "include",
-            });
-            if (!oResp.ok) return;
-            const oData = await oResp.json();
-            const oModel = this.getView().getModel("request");
-            oModel.setProperty("/ReqTitle", oData.ReqTitle || "");
-            oModel.setProperty("/Reason",   oData.Reason   || "");
-          } catch (e) { console.warn("_fetchRequestHeader failed", e); }
-        },
-
-        _fetchReqItem: async function (sReqId) {
-          try {
-            const sEnvId = this.getView().getModel("requestContext").getProperty("/EnvId") || "DEV";
-            const sUrl =
-              "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/" +
-              "ZC_CONF_REQ_H(ReqId=" + sReqId + ",EnvId='" + sEnvId + "',IsActiveEntity=true)/_Items" +
-              "?$select=ReqItemId,ConfId&$top=1&sap-client=" + this._getSapClient();
-            const oResp = await fetch(sUrl, {
-              headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
-              credentials: "include",
-            });
-            if (!oResp.ok) return;
-            const aItems = (await oResp.json()).value || [];
-            if (!aItems.length) return;
-            const oModel = this.getView().getModel("request");
-            oModel.setProperty("/ReqItemId", aItems[0].ReqItemId || "");
-            if (aItems[0].ConfId) oModel.setProperty("/ConfId", aItems[0].ConfId);
-          } catch (e) {
-            console.warn("_fetchReqItem failed", e);
-          }
-        },
-
-        _patchRequestHeader: async function (sReqId, sTitle, sReason) {
-          const sServiceUrl =
-            "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/?sap-client=" + this._getSapClient();
-          const sCsrfToken = await this._fetchCsrfToken(sServiceUrl);
-          if (!sCsrfToken) return;
-          const sEnvId = this.getView().getModel("requestContext").getProperty("/EnvId") || "DEV";
-          const sUrl =
-            "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/" +
-            "ZC_CONF_REQ_H(ReqId=" + sReqId + ",EnvId='" + sEnvId + "',IsActiveEntity=true)" +
-            "?sap-client=" + this._getSapClient();
-          await fetch(sUrl, {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRF-Token": sCsrfToken,
-              "X-Requested-With": "XMLHttpRequest",
-            },
-            credentials: "include",
-            body: JSON.stringify({ ReqTitle: sTitle, Reason: sReason }),
-          });
-        },
-
-        _getSapClient: function () {
-          return new URLSearchParams(window.location.search).get("sap-client") || "324";
-        },
-
-        _fetchCsrfToken: async function (sServiceUrl) {
-          const oResp = await fetch(sServiceUrl, {
-            method: "GET",
-            headers: { "X-CSRF-Token": "Fetch", "X-Requested-With": "XMLHttpRequest" },
-            credentials: "include",
-          });
-          if (!oResp.ok) return null;
-          return oResp.headers.get("X-CSRF-Token") || null;
         },
 
         onClearFilters: function () {
@@ -1345,20 +1088,13 @@ sap.ui.define(
             });
             this._oInspectorDialog.bindAggregation("items", {
               path: "/InspectorDef",
-              template: new StandardListItem({ title: "{UserId}", description: "{Fullname}" }),
+              template: new StandardListItem({ title: "{UserId}", description: "{Fullname} ({RoleLevel})" }),
             });
             this.getView().addDependent(this._oInspectorDialog);
           }
           this._oInspectorDialog.open();
         },
 
-        onNavBack: function () {
-          if (window.history.length > 1) {
-            window.history.back();
-          } else {
-            window.close();
-          }
-        },
       },
     );
   },
