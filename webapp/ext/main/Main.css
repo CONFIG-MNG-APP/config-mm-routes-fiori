@@ -113,3 +113,46 @@
   font-size: 0.82rem !important;
   padding: 0 6px !important;
 }
+
+/* ─── Summary Statistics Strip ─── */
+.mmrSummaryStrip {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.mmrStatBox {
+  padding: 2px 16px;
+  text-align: center;
+}
+
+.mmrStatBox + .mmrStatBox {
+  border-left: 1px solid #e0e0e0;
+}
+
+.mmrStatNumber {
+  font-size: 1.3rem !important;
+  font-weight: 700 !important;
+  color: #32363a !important;
+  line-height: 1.2 !important;
+}
+
+.mmrStatNumber--create { color: #107e3e !important; }
+.mmrStatNumber--update { color: #0070f2 !important; }
+.mmrStatNumber--delete { color: #bb0000 !important; }
+
+.mmrStatLabel {
+  font-size: 0.65rem !important;
+  color: #89919a !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600 !important;
+}
+
+.mmrRowCount {
+  font-size: 0.8rem !important;
+  color: #89919a !important;
+  margin-left: 8px;
+}

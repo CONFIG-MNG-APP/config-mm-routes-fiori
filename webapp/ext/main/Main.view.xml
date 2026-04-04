@@ -132,9 +132,34 @@
           showIcon="true"
           class="sapUiSmallMarginBottom" />
 
+        <!-- ─── Summary Statistics ─── -->
+        <HBox
+          alignItems="Center"
+          justifyContent="Start"
+          class="sapUiSmallMarginBottom mmrSummaryStrip"
+          visible="{= ${ui>/requestCreated} }">
+          <VBox class="mmrStatBox">
+            <Text text="{ui>/totalCount}" class="mmrStatNumber" />
+            <Text text="TOTAL" class="mmrStatLabel" />
+          </VBox>
+          <VBox class="mmrStatBox">
+            <Text text="{ui>/createCount}" class="mmrStatNumber mmrStatNumber--create" />
+            <Text text="CREATE" class="mmrStatLabel" />
+          </VBox>
+          <VBox class="mmrStatBox">
+            <Text text="{ui>/updateCount}" class="mmrStatNumber mmrStatNumber--update" />
+            <Text text="UPDATE" class="mmrStatLabel" />
+          </VBox>
+          <VBox class="mmrStatBox">
+            <Text text="{ui>/deleteCount}" class="mmrStatNumber mmrStatNumber--delete" />
+            <Text text="DELETE" class="mmrStatLabel" />
+          </VBox>
+        </HBox>
+
         <!-- Table Toolbar -->
         <OverflowToolbar class="sapUiTinyMarginBottom mmrTableToolbar">
           <Title text="Warehouse Route Lines" level="H4" />
+          <Text text="{ui>/rowCountText}" class="mmrRowCount" visible="{= !!${ui>/rowCountText} }" />
           <ToolbarSpacer />
 
           <Button

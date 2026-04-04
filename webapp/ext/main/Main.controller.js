@@ -94,7 +94,11 @@ sap.ui.define(
           this._aFieldDef  = [];   // loaded from ZCONFFIELDDEF via catalog service
           this.getView().setModel(new JSONModel({ rows: [] }), "tableData");
 
-          const oUIModel = new JSONModel({ editMode: true, requestCreated: false, viewOnly: false });
+          const oUIModel = new JSONModel({
+            editMode: true, requestCreated: false, viewOnly: false,
+            totalCount: 0, createCount: 0, updateCount: 0, deleteCount: 0,
+            rowCountText: "",
+          });
           this.getView().setModel(oUIModel, "ui");
 
           const oFilterModel = new JSONModel({
@@ -863,6 +867,24 @@ sap.ui.define(
         _applyBaseFilter: function () {
           const oBinding = this.byId("routesTable").getBinding("items");
           if (oBinding) oBinding.filter([]);
+          this._updateStats();
+        },
+
+        _updateStats: function () {
+          var oUI   = this.getView().getModel("ui");
+          var aRows = this.getView().getModel("tableData").getProperty("/rows") || [];
+          var iCreate = 0, iUpdate = 0, iDelete = 0;
+          aRows.forEach(function (r) {
+            if (r.ActionType === "C") iCreate++;
+            else if (r.ActionType === "U") iUpdate++;
+            else if (r.ActionType === "X") iDelete++;
+          });
+          var iVisible = aRows.filter(function (r) { return r._state !== "deleted"; }).length;
+          oUI.setProperty("/totalCount",  aRows.length);
+          oUI.setProperty("/createCount", iCreate);
+          oUI.setProperty("/updateCount", iUpdate);
+          oUI.setProperty("/deleteCount", iDelete);
+          oUI.setProperty("/rowCountText", iVisible + " lines");
         },
 
         /** Map request status string → SAP UI5 ObjectStatus state */
