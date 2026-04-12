@@ -422,28 +422,38 @@ sap.ui.define(
         },
 
         _patchRequestHeader: async function (sReqId, sTitle, sReason) {
+          if (!sReqId) return;
           const sSapClient = this._getSapClient();
-          const sServiceUrl =
-            "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/?sap-client=" + sSapClient;
-          const sCsrfToken = await this._fetchCsrfToken(sServiceUrl);
+          const sEnvId     = this.getView().getModel("requestContext").getProperty("/EnvId") || "DEV";
+          const sBase      = "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/";
+          const sClient    = "?sap-client=" + sSapClient;
+
+          const sCsrfToken = await this._fetchCsrfToken(sBase + sClient);
           if (!sCsrfToken) return;
-          const sEnvId =
-            this.getView().getModel("requestContext").getProperty("/EnvId") || "DEV";
-          const sUrl =
-            "/sap/opu/odata4/sap/zui_conf_req/srvd/sap/zsd_conf_req/0001/" +
-            "ZC_CONF_REQ_H(ReqId=" + sReqId +
-            ",EnvId='" + sEnvId + "',IsActiveEntity=true)" +
-            "?sap-client=" + sSapClient;
-          await fetch(sUrl, {
-            method: "PATCH",
+
+          // Use updateReason action — runs MODIFY ENTITIES IN LOCAL MODE on backend,
+          // bypassing draft/ETag/lock entirely. Also updates ReqTitle (req_title param).
+          const sActionUrl = sBase +
+            "ZC_CONF_REQ_H(ReqId=" + sReqId + ",EnvId='" + sEnvId + "',IsActiveEntity=true)/" +
+            "com.sap.gateway.srvd.zsd_conf_req.v0001.updateReason" + sClient;
+
+          const oResp = await fetch(sActionUrl, {
+            method: "POST",
             headers: {
               "Content-Type": "application/json",
               "X-CSRF-Token": sCsrfToken,
               "X-Requested-With": "XMLHttpRequest",
+              Accept: "application/json",
             },
             credentials: "include",
-            body: JSON.stringify({ ReqTitle: sTitle, Reason: sReason }),
+            body: JSON.stringify({ reason: sReason || "", req_title: sTitle || "" }),
           });
+          if (!oResp.ok) {
+            const oErr = await oResp.json().catch(() => ({}));
+            const sMsg = oErr?.error?.message || ("updateReason HTTP " + oResp.status);
+            console.error("_patchRequestHeader (updateReason) failed:", oResp.status, oErr);
+            throw new Error(sMsg);
+          }
         },
       }
     );
