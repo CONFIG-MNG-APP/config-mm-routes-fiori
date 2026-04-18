@@ -652,6 +652,26 @@ sap.ui.define(
             }
           }.bind(this));
 
+          // ── Duplicate business key check (PlantId + SendWh + ReceiveWh) ──
+          const aSeen = [];
+          aRows.forEach(function (row, iIdx) {
+            if (row._state === "deleted") return;
+            const sPlant = String(row.PlantId   || "").trim();
+            const sSend  = String(row.SendWh    || "").trim();
+            const sRecv  = String(row.ReceiveWh || "").trim();
+            if (!sPlant || !sSend || !sRecv) return;
+
+            const sKey = sPlant + "|" + sSend + "|" + sRecv;
+            if (aSeen.indexOf(sKey) >= 0) {
+              row._vs_PlantId   = "Error";
+              row._vs_SendWh    = "Error";
+              row._vs_ReceiveWh = "Error";
+              aErrors.push("Row " + (iIdx + 1) + ": Duplicate entry — Plant '" + sPlant + "' + SendWH '" + sSend + "' + ReceiveWH '" + sRecv + "' already exists in this request.");
+            } else {
+              aSeen.push(sKey);
+            }
+          });
+
           return aErrors;
         },
 
