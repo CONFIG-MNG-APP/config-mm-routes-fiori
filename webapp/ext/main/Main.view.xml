@@ -315,6 +315,7 @@
                 <HBox>
                   <Text text="{tableData>PlantId}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
                   <Input value="{tableData>PlantId}" visible="{ui>/editMode}" width="100%"
+                    editable="{= ${tableData>_state} === 'new'}"
                     maxLength="10"
                     valueState="{tableData>_vs_PlantId}"
                     valueStateText="Plant is required"
@@ -325,6 +326,7 @@
                 <HBox>
                   <Text text="{tableData>SendWh}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
                   <Input value="{tableData>SendWh}" visible="{ui>/editMode}" width="100%"
+                    editable="{= ${tableData>_state} === 'new'}"
                     maxLength="10"
                     valueState="{tableData>_vs_SendWh}"
                     valueStateText="{tableData>_vs_SendWhText}"
@@ -335,6 +337,7 @@
                 <HBox>
                   <Text text="{tableData>ReceiveWh}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
                   <Input value="{tableData>ReceiveWh}" visible="{ui>/editMode}" width="100%"
+                    editable="{= ${tableData>_state} === 'new'}"
                     maxLength="10"
                     valueState="{tableData>_vs_ReceiveWh}"
                     valueStateText="{tableData>_vs_ReceiveWhText}"
@@ -345,6 +348,7 @@
                 <HBox>
                   <Text text="{tableData>TransMode}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
                   <Input value="{tableData>TransMode}" visible="{ui>/editMode}" width="100%"
+                    editable="{= ${tableData>_state} === 'new'}"
                     maxLength="20"
                     valueState="{tableData>_vs_TransMode}"
                     valueStateText="Transport Mode is required"
