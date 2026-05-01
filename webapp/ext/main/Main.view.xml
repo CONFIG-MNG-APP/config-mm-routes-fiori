@@ -348,7 +348,7 @@
                 <HBox>
                   <Text text="{tableData>TransMode}" visible="{= !${ui>/editMode}}" class="mmrCellText" />
                   <Input value="{tableData>TransMode}" visible="{ui>/editMode}" width="100%"
-                    editable="{= ${tableData>_state} === 'new'}"
+                    editable="{= ${tableData>_state} !== 'deleted'}"
                     maxLength="20"
                     valueState="{tableData>_vs_TransMode}"
                     valueStateText="Transport Mode is required"
