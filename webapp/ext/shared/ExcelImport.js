@@ -5,14 +5,15 @@
  * (MM Routes, SD Price, FI Limit, MM Safe Stock, …).
  *
  * Each app passes its own config to parseWorkbook():
- *   headerMap  : { "excel column alias" : "ModelFieldName" }
- *   boolFields : ["IsAllowed", ...]   — fields parsed as boolean
- *   buildRow   : function(sEnvId) → blank row object with _state / _reqItemId / ActionType
+ *   headerMap     : { "excel column alias" : "ModelFieldName" }
+ *   boolFields    : ["IsAllowed", ...]   — fields parsed as boolean
+ *   numericFields : ["MinQty", ...]      — fields parsed as number
+ *   dateFields    : ["ValidFrom", ...]   — fields parsed as date (YYYY-MM-DD)
+ *   buildRow      : function(sEnvId) → blank row object with _state / _reqItemId / ActionType
  *
- * ⚠️  FILE NÀY PHẢI ĐỒNG BỘ VỚI:
- *   conf-mng-fe-sd-price/.../ext/shared/ExcelImport.js
- *   conf-mng-fe-fi-limit/.../ext/shared/ExcelImport.js   (tương lai)
- *   conf-mng-fe-safe-stock/.../ext/shared/ExcelImport.js  (tương lai)
+ * FILE NAY PHAI DONG BO VOI:
+ *   config-sd-price-fiori/.../ext/shared/ExcelImport.js
+ *   conf-mm-safestock/.../ext/shared/ExcelImport.js
  */
 sap.ui.define([], function () {
   "use strict";
@@ -27,14 +28,18 @@ sap.ui.define([], function () {
      * @param {object}   oConfig           App-specific configuration
      * @param {object}   oConfig.headerMap { "excel alias" : "ModelField" } — matching is
      *                                     case-insensitive and collapses extra whitespace
-     * @param {string[]} [oConfig.boolFields=[]]  Model fields to coerce to boolean
+     * @param {string[]} [oConfig.boolFields=[]]     Model fields to coerce to boolean
+     * @param {string[]} [oConfig.numericFields=[]]  Model fields to coerce to number
+     * @param {string[]} [oConfig.dateFields=[]]     Model fields to coerce to YYYY-MM-DD
      * @param {Function} oConfig.buildRow  function(sEnvId) → default row object
      * @returns {{ rows: object[], errors: string[], skipped: number }}
      */
     parseWorkbook: function (workbook, sEnvId, oConfig) {
-      var headerMap  = oConfig.headerMap  || {};
-      var boolFields = oConfig.boolFields || [];
-      var buildRow   = oConfig.buildRow   || function (e) {
+      var headerMap     = oConfig.headerMap     || {};
+      var boolFields    = oConfig.boolFields    || [];
+      var numericFields = oConfig.numericFields || [];
+      var dateFields    = oConfig.dateFields    || [];
+      var buildRow      = oConfig.buildRow      || function (e) {
         return { EnvId: e, ActionType: "C", _state: "new", _reqItemId: null };
       };
 
@@ -70,7 +75,7 @@ sap.ui.define([], function () {
 
       rawData.forEach(function (rawRow, idx) {
         var row = ExcelImport._transformRow(
-          rawRow, headerResult.mapped, sEnvId, buildRow, boolFields
+          rawRow, headerResult.mapped, sEnvId, buildRow, boolFields, numericFields, dateFields
         );
         if (row) {
           rows.push(row);
@@ -93,6 +98,38 @@ sap.ui.define([], function () {
       return ["yes", "true", "x", "1", "y"].indexOf(
         String(val).trim().toLowerCase()
       ) !== -1;
+    },
+
+    /** Coerce a raw Excel cell value to number. */
+    _parseNumber: function (val) {
+      if (typeof val === "number") return val;
+      if (!val) return 0;
+      var num = parseFloat(String(val).trim().replace(/,/g, ""));
+      return isNaN(num) ? 0 : num;
+    },
+
+    /** Coerce a raw Excel cell value to YYYY-MM-DD date string. */
+    _parseDate: function (val) {
+      if (!val) return null;
+      // Handle Excel serial date numbers
+      if (typeof val === "number") {
+        var d = new Date((val - 25569) * 86400 * 1000);
+        return ExcelImport._formatDate(d);
+      }
+      var sVal = String(val).trim();
+      // Already in YYYY-MM-DD format
+      if (/^\d{4}-\d{2}-\d{2}$/.test(sVal)) return sVal;
+      var d2 = new Date(sVal);
+      if (isNaN(d2.getTime())) return sVal; // return as-is, validation will catch it
+      return ExcelImport._formatDate(d2);
+    },
+
+    /** Format a Date object to YYYY-MM-DD. */
+    _formatDate: function (d) {
+      var y   = d.getFullYear();
+      var m   = ("0" + (d.getMonth() + 1)).slice(-2);
+      var day = ("0" + d.getDate()).slice(-2);
+      return y + "-" + m + "-" + day;
     },
 
     /** Normalize an Excel header for lookup: trim, lowercase, collapse spaces. */
@@ -119,7 +156,7 @@ sap.ui.define([], function () {
      * Convert one raw data row into a model row using the resolved header mapping.
      * Returns null if the row contains no usable data (all empty → skip).
      */
-    _transformRow: function (rawRow, headerMapping, sEnvId, buildRow, boolFields) {
+    _transformRow: function (rawRow, headerMapping, sEnvId, buildRow, boolFields, numericFields, dateFields) {
       var row     = buildRow(sEnvId);
       var hasData = false;
 
@@ -131,6 +168,15 @@ sap.ui.define([], function () {
         if (boolFields.indexOf(modelField) !== -1) {
           row[modelField] = ExcelImport._parseBool(val);
           hasData = true;
+        } else if (numericFields.indexOf(modelField) !== -1) {
+          row[modelField] = ExcelImport._parseNumber(val);
+          hasData = true;
+        } else if (dateFields.indexOf(modelField) !== -1) {
+          var dateVal = ExcelImport._parseDate(val);
+          if (dateVal) {
+            row[modelField] = dateVal;
+            hasData = true;
+          }
         } else {
           var sVal = String(val).trim();
           if (sVal) {

@@ -66,6 +66,8 @@ sap.ui.define(
               "note":            "ChangeNote",
             },
             boolFields: ["IsAllowed"],
+            numericFields: [],
+            dateFields: [],
             buildRow: function (sEnvId) {
               return {
                 ItemId:      "",
@@ -237,6 +239,14 @@ sap.ui.define(
               var oFile = oEvent.target.files[0];
               if (!oFile) { document.body.removeChild(oInput); return; }
 
+              // File size check (max 5 MB)
+              var MAX_FILE_SIZE = 5 * 1024 * 1024;
+              if (oFile.size > MAX_FILE_SIZE) {
+                MessageBox.error("File size exceeds 5 MB limit. Please use a smaller file.");
+                document.body.removeChild(oInput);
+                return;
+              }
+
               var oReader = new FileReader();
               oReader.onload = function (e) {
                 try {
@@ -269,6 +279,11 @@ sap.ui.define(
             return;
           }
 
+          if (result.rows.length > 1000) {
+            MessageBox.error("The file contains " + result.rows.length + " rows, exceeding the 1,000-row limit. Please split the file.");
+            return;
+          }
+
           if (result.rows.length > 500) {
             var that = this;
             MessageBox.confirm(
@@ -292,6 +307,9 @@ sap.ui.define(
           for (var i = result.rows.length - 1; i >= 0; i--) {
             aRows.unshift(result.rows[i]);
           }
+
+          // Validate ALL rows (imported + existing) — catches duplicates cross-set
+          var aErrors = this._validateRows(aRows);
           oTableModel.setProperty("/rows", aRows);
           this._applyBaseFilter();
 
@@ -299,7 +317,15 @@ sap.ui.define(
           if (result.skipped > 0) {
             sMsg += "\n" + result.skipped + " row(s) skipped (empty).";
           }
-          MessageToast.show(sMsg);
+
+          if (aErrors.length) {
+            MessageBox.warning(
+              sMsg + "\n\n" + aErrors.length + " validation issue(s) found. Please review highlighted rows before saving.",
+              { title: "Import Complete with Warnings" }
+            );
+          } else {
+            MessageToast.show(sMsg);
+          }
         },
 
         /* ── End Import from Excel ─────────────────────────── */
